@@ -1,0 +1,53 @@
+AN2100 Revison B, 3.6 (p.10)
+
+CY8C27: LoadConfigTBL_BootLoaderConfig_Ordered:
+CY8C29: LoadConfigTBL_bootloader_cy8c29_Ordered:
+
+DUALADC paremeters
+
+CalcTime >= (DataClock * 260) / CPU_Clock
+2000000 * 260 / 12000000 = 43.33 -> 64
+
+SampleRate = DataClock / (2^(bits + 2) + CalcTime)
+= 2000000 / (2^(8 + 2) + 64) = 1838.24
+
+(by mayfair 2005.9.27)
+		 ; The following code updates the element of AdcValue corresponding to the
+		 ; ChannelNumber with the ADC counts.
+		 push X
+		 mov A,[_bAdcChannelNumber]
+		 asl A
+		 add A,_bAdcValue
+		 mov X,A
+		 mov A,[(DUALADC_A_iResult1 + HighByte)]
+		 mov [X],A
+		 inc X
+		 mov A,[(DUALADC_A_iResult1 + LowByte)]
+		 mov [X],A
+;		 mov A,[_bAdcChannelNumber]
+;		 inc A
+;		 inc A
+;		 inc A
+;		 inc A
+;		 asl A
+;		 add A,_bAdcValue
+;		 mov X,A
+;		 mov A,[(DUALADC_A_iResult2 + HighByte)]
+;		 mov [X],A
+;		 inc X
+;		 mov A,[(DUALADC_A_iResult2 + LowByte)]
+;		 mov [X],A
+		 pop X
+		
+		 ; The following code increments the ChannelNumber and updates the AMUX.  When
+		 ; the ChannelNumber becomes 5, it is reset to 0 and bit0 of "Flags" is set.
+		 inc [_bAdcChannelNumber]
+		 cmp [_bAdcChannelNumber],5
+		 jnz BypassResetChannel
+		 mov [_bAdcChannelNumber],0
+		 or [_bAdcFlags],0x01
+BypassResetChannel:	
+		 mov A,[_bAdcChannelNumber]
+		 lcall AMUX4_A_1_InputSelect
+;		 mov A,[_bAdcChannelNumber]
+;		 lcall AMUX4_A_2_InputSelect
