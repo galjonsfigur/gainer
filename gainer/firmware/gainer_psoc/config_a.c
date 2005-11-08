@@ -252,6 +252,10 @@ void handle_commands_config_a(void)
 					break;
 				
 				default:
+					// seems to be an invalid command
+					cReplyBuffer[0] = '!';
+					cReplyBuffer[1] = '*';
+					bNumBytes = 2;
 					break;
 			}
 		}
@@ -287,6 +291,13 @@ BYTE command_set_dout_h(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
+	if (channel > (bChannels_DOUT - 1)) {
+		// specified channel number seems to be invalid
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	set_dout(channel, TRUE);
 
 	cReplyBuffer[0] = 'H';
@@ -299,6 +310,13 @@ BYTE command_set_dout_h(char *pCommand)
 BYTE command_set_dout_l(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
+
+	if (channel > (bChannels_DOUT - 1)) {
+		// specified channel number seems to be invalid
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
 
 	set_dout(channel, FALSE);
 
@@ -350,6 +368,14 @@ BYTE command_set_aout_ch(char *pCommand)
 	BYTE value = 0;
 
 	channel = HEX_TO_BYTE(*(pCommand + 1));
+
+	if (channel > (bChannels_AOUT - 1)) {
+		// specified channel number seems to be invalid
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	value = HEX_TO_BYTE(*(pCommand + 2));
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 3));
 
@@ -396,6 +422,13 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 	bContinuousAinRequested = bContinuous;
 
 	channel = HEX_TO_BYTE(*(pCommand + 1));
+
+	if (channel > (bChannels_AIN - 1)) {
+		// specified channel number seems to be invalid
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
 
 	if (bContinuousAinRequested) {
 		bContinuousAinMask = 1 << channel;	// e.g. 0x0010 means 4th channel
@@ -445,6 +478,22 @@ BYTE command_set_gain(char *pCommand)
 {
 	BYTE gain = HEX_TO_BYTE(*(pCommand + 1));
 	BYTE reference = HEX_TO_BYTE(*(pCommand + 2));
+
+	// gain: 0 ~ 15 (x1.00 ~ x48.0)
+	if (gain > 15) {
+		// specified gain seems to be invalid
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
+	// reference: 0 ~ 1 (VSS or AGND)
+	if (reference > 1) {
+		// specified reference seems to be invalid
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
 
 	PGA_A_1_SetGain(bGainTable[gain]);
 	PGA_A_2_SetGain(bGainTable[gain]);

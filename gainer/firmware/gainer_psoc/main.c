@@ -181,6 +181,10 @@ BYTE HandleConfigCommand(char *pCommand)
 			break;
 
 		default:
+			// seems to be an invalid command
+			cReplyBuffer[0] = '!';
+			cReplyBuffer[1] = '*';
+			bNumBytes = 2;
 			break;
 	}
 
