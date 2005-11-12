@@ -15,7 +15,7 @@ const int LastBlock_To_Check = LAST_BLOCK_TO_CHECK;
 #pragma text:BootLoaderArea
 
 //uncomment the following line if the button is pull-up
-#define BUTTON_IS_PULL_UP
+//#define BUTTON_IS_PULL_UP
 
 #ifdef BUTTON_IS_PULL_UP
 #define SETBUTTON()	PRT1DR|=0x20	// pull up for button on P1[5] pin (was PRT0DR|=0x20)
