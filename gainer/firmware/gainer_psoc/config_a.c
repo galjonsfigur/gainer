@@ -1,5 +1,8 @@
 #include "gainer_common.h"
 
+//uncomment the following line if the button is pull-up
+//#define BUTTON_IS_PULL_UP
+
 extern BOOL bContinuousAinRequested;
 extern BOOL bContinuousDinRequested;
 extern BYTE bCurrentConfig;
@@ -12,7 +15,7 @@ void handle_commands_config_a(void);
 BYTE command_set_dout_all(char *pCommand);
 BYTE command_set_dout_h(char *pCommand);
 BYTE command_set_dout_l(char *pCommand);
-BYTE command_get_din_all(BOOL bContinuous);
+BYTE command_get_din_all(char *pCommand, BOOL bContinuous);
 BYTE command_set_aout_all(char *pCommand);
 BYTE command_set_aout_ch(char *pCommand);
 BYTE command_get_ain_all(char *pCommand, BOOL bContinuous);
@@ -152,7 +155,10 @@ void Main_Config_A(void)
 		bAdcFlags &= ~0x01;
 	}
 
+#ifdef BUTTON_IS_PULL_UP
 	PRT1DR |= 0x20;	// let's pull-up!
+#endif
+
 	bButtonIsOn = GET_BUTTON();
 
 	if (bContinuousAinRequested) {
@@ -164,7 +170,12 @@ void Main_Config_A(void)
 	}
 
 	if (bButtonIsOn != bButtonWasOn) {
+#ifdef BUTTON_IS_PULL_UP
+		cReplyBuffer[0] = bButtonIsOn ? 'F' : 'N';
+#else
 		cReplyBuffer[0] = bButtonIsOn ? 'N' : 'F';
+#endif
+
 		cReplyBuffer[1] = '*';
 		UART_A_Write(cReplyBuffer, 2);
 //		UART_A_CPutString(bButtonIsOn ? "N*" : "F*");
@@ -200,11 +211,11 @@ void handle_commands_config_a(void)
 					break;
 				
 				case 'R':	// get all digital inputs (R)
-					bNumBytes = command_get_din_all(FALSE);
+					bNumBytes = command_get_din_all(pCommand, FALSE);
 					break;
 				
 				case 'r':	// get all digital inputs (continuous) (r)
-					bNumBytes = command_get_din_all(TRUE);
+					bNumBytes = command_get_din_all(pCommand, TRUE);
 					break;
 				
 				case 'A':	// set all analog outputs (Axx...xx)
@@ -327,7 +338,7 @@ BYTE command_set_dout_l(char *pCommand)
 	return 3;
 }
 
-BYTE command_get_din_all(BOOL bContinuous)
+BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
 {
 	BYTE value = 0x00;
 
@@ -338,7 +349,7 @@ BYTE command_get_din_all(BOOL bContinuous)
 	value += GET_DIN_3() ? 0x04 : 0x00;
 	value += GET_DIN_4() ? 0x08 : 0x00;
 
-	cReplyBuffer[0] = 'R';
+	cReplyBuffer[0] = *pCommand;
 	ByteToHex(value, &cReplyBuffer[1]);	// 'x','x'
 	cReplyBuffer[3] = '*';
 
@@ -394,7 +405,7 @@ BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 {
 	bContinuousAinRequested = bContinuous;
 	bContinuousAinMask = bContinuousAinRequested ? 0x000F : 0x0000;
-#if 1
+
 	cReplyBuffer[0] = *pCommand;
 	ByteToHex(b_ain[3], &cReplyBuffer[1]);
 	ByteToHex(b_ain[2], &cReplyBuffer[3]);
@@ -403,15 +414,6 @@ BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 	cReplyBuffer[9] = '*';
 
 	return 10;
-#else
-	UART_A_CPutString("i");
-	UART_A_PutSHexByte(b_ain[3]);
-	UART_A_PutSHexByte(b_ain[2]);
-	UART_A_PutSHexByte(b_ain[1]);
-	UART_A_PutSHexByte(b_ain[0]);
-	UART_A_CPutString("*");
-	return 0;
-#endif
 }
 
 BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
@@ -620,15 +622,15 @@ void send_din_values(void)
 	BYTE length = 0;
 	BYTE value = 0;
 
-	PRT0DR |= 0x55;	// let's pull-up all DIN ports
+//	PRT0DR |= 0x55;	// let's pull-up all DIN ports
 
 	value += GET_DIN_1() ? 0x01 : 0x00;
 	value += GET_DIN_2() ? 0x02 : 0x00;
 	value += GET_DIN_3() ? 0x04 : 0x00;
 	value += GET_DIN_4() ? 0x08 : 0x00;
 
-	cReplyBuffer[0] = 'i';
-	ByteToHex(value, &cReplyBuffer[1]);
+	cReplyBuffer[0] = 'r';
+	ByteToHex(value, &cReplyBuffer[1]);	// 'x', 'x'
 	cReplyBuffer[3] = '*';
 	length = 4;
 
