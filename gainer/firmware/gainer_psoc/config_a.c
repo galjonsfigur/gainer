@@ -178,7 +178,6 @@ void Main_Config_A(void)
 
 		cReplyBuffer[1] = '*';
 		UART_A_Write(cReplyBuffer, 2);
-//		UART_A_CPutString(bButtonIsOn ? "N*" : "F*");
 	}
 
 	bButtonWasOn = bButtonIsOn;
@@ -362,9 +361,11 @@ BYTE command_set_aout_all(char *pCommand)
 	BYTE value = 0;
 
 	for (i = 0; i < bChannels_AOUT; i++) {
-		value = HEX_TO_BYTE(*pCommand++);
-		value = (value << 4) + HEX_TO_BYTE(*pCommand++);
-		set_aout((bChannels_AOUT - 1 - i), value);
+		pCommand++;
+		value = HEX_TO_BYTE(*pCommand);
+		pCommand++;
+		value = (value << 4) + HEX_TO_BYTE(*pCommand);
+		set_aout(i, value);
 	}
 
 	cReplyBuffer[0] = 'A';
@@ -407,10 +408,10 @@ BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 	bContinuousAinMask = bContinuousAinRequested ? 0x000F : 0x0000;
 
 	cReplyBuffer[0] = *pCommand;
-	ByteToHex(b_ain[3], &cReplyBuffer[1]);
-	ByteToHex(b_ain[2], &cReplyBuffer[3]);
-	ByteToHex(b_ain[1], &cReplyBuffer[5]);
-	ByteToHex(b_ain[0], &cReplyBuffer[7]);
+	ByteToHex(b_ain[0], &cReplyBuffer[1]);
+	ByteToHex(b_ain[1], &cReplyBuffer[3]);
+	ByteToHex(b_ain[2], &cReplyBuffer[5]);
+	ByteToHex(b_ain[3], &cReplyBuffer[7]);
 	cReplyBuffer[9] = '*';
 
 	return 10;
@@ -593,10 +594,10 @@ void send_ain_values(void)
 
 	if (0x000F == bContinuousAinMask) {
 		cReplyBuffer[0] = 'i';
-		ByteToHex(b_ain[3], &cReplyBuffer[1]);
-		ByteToHex(b_ain[2], &cReplyBuffer[3]);
-		ByteToHex(b_ain[1], &cReplyBuffer[5]);
-		ByteToHex(b_ain[0], &cReplyBuffer[7]);
+		ByteToHex(b_ain[0], &cReplyBuffer[1]);
+		ByteToHex(b_ain[1], &cReplyBuffer[3]);
+		ByteToHex(b_ain[2], &cReplyBuffer[5]);
+		ByteToHex(b_ain[3], &cReplyBuffer[7]);
 		cReplyBuffer[9] = '*';
 		length = 10;
 	} else {
