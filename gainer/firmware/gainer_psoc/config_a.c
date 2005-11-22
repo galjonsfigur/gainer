@@ -1,8 +1,5 @@
 #include "gainer_common.h"
 
-//uncomment the following line if the button is pull-up
-//#define BUTTON_IS_PULL_UP
-
 extern BOOL bContinuousAinRequested;
 extern BOOL bContinuousDinRequested;
 extern BYTE bCurrentConfig;
@@ -65,8 +62,6 @@ void Enter_Config_A(void)
 	// start analog inputs
 	AMUX4_A_1_Start();
 	AMUX4_A_2_Start();
-//	AMUX4_A_1_InputSelect(bAdcChannelNumber);
-	AMUX4_A_1_InputSelect(AMUX4_A_1_PORT0_7);
 	AMUX4_A_2_InputSelect(bAdcChannelNumber);
 	PGA_A_1_SetGain(bGainTable[0]);
 	PGA_A_2_SetGain(bGainTable[0]);
@@ -155,12 +150,6 @@ void Main_Config_A(void)
 		bAdcFlags &= ~0x01;
 	}
 
-#ifdef BUTTON_IS_PULL_UP
-	PRT1DR |= 0x20;	// let's pull-up!
-#endif
-
-	bButtonIsOn = GET_BUTTON();
-
 	if (bContinuousAinRequested) {
 		send_ain_values();
 	}
@@ -169,18 +158,20 @@ void Main_Config_A(void)
 		send_din_values();	
 	}
 
-	if (bButtonIsOn != bButtonWasOn) {
-#ifdef BUTTON_IS_PULL_UP
-		cReplyBuffer[0] = bButtonIsOn ? 'F' : 'N';
-#else
-		cReplyBuffer[0] = bButtonIsOn ? 'N' : 'F';
-#endif
+	bButtonIsOn = GET_BUTTON();
 
+	if (bButtonIsOn != bButtonWasOn) {
+		cReplyBuffer[0] = bButtonIsOn ? 'N' : 'F';
 		cReplyBuffer[1] = '*';
 		UART_A_Write(cReplyBuffer, 2);
 	}
 
 	bButtonWasOn = bButtonIsOn;
+
+	// reset Rx buffer if it seems to be broken
+	if (UART_A_bErrCheck()) {
+		UART_A_CmdReset();
+	}
 
 	handle_commands_config_a();
 }
@@ -193,10 +184,6 @@ void handle_commands_config_a(void)
 	if (UART_A_bCmdCheck()) {				// Wait for command    
 		if(pCommand = UART_A_szGetParam()) {
 			switch (*pCommand) {
-				case 'C':
-					bNumBytes = HandleConfigCommand(pCommand);
-					break;
-
 				case 'D':	// set all digital outputs (Dxx)
 					bNumBytes = command_set_dout_all(pCommand);
 					break;
@@ -281,6 +268,13 @@ void handle_commands_config_a(void)
 BYTE command_set_dout_all(char *pCommand)
 {
 	BYTE value = 0;
+
+	if (3 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	value = HEX_TO_BYTE(*(pCommand + 1));
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 2));
 
@@ -300,6 +294,12 @@ BYTE command_set_dout_all(char *pCommand)
 BYTE command_set_dout_h(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
+
+	if (2 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
 
 	if (channel > (bChannels_DOUT - 1)) {
 		// specified channel number seems to be invalid
@@ -321,6 +321,12 @@ BYTE command_set_dout_l(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
+	if (2 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	if (channel > (bChannels_DOUT - 1)) {
 		// specified channel number seems to be invalid
 		cReplyBuffer[0] = '!';
@@ -341,6 +347,12 @@ BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
 {
 	BYTE value = 0x00;
 
+	if (1 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	bContinuousDinRequested = bContinuous;
 
 	value += GET_DIN_1() ? 0x01 : 0x00;
@@ -360,6 +372,13 @@ BYTE command_set_aout_all(char *pCommand)
 	BYTE i = 0;
 	BYTE value = 0;
 
+	// should change 0 or 8 channel condition
+	if (9 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	for (i = 0; i < bChannels_AOUT; i++) {
 		pCommand++;
 		value = HEX_TO_BYTE(*pCommand);
@@ -378,6 +397,12 @@ BYTE command_set_aout_ch(char *pCommand)
 {
 	BYTE channel = 0;
 	BYTE value = 0;
+
+	if (4 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
 
 	channel = HEX_TO_BYTE(*(pCommand + 1));
 
@@ -404,6 +429,12 @@ BYTE command_set_aout_ch(char *pCommand)
 
 BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 {
+	if (1 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	bContinuousAinRequested = bContinuous;
 	bContinuousAinMask = bContinuousAinRequested ? 0x000F : 0x0000;
 
@@ -421,6 +452,12 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 {
 	BYTE channel = 0;
 	BYTE value = 0;
+
+	if (2 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
 
 	bContinuousAinRequested = bContinuous;
 
@@ -448,6 +485,12 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 
 BYTE command_stop_cont(void)
 {
+	if (1 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	bContinuousAinRequested = FALSE;
 	bContinuousAinMask = 0x0000;
 	bContinuousDinRequested = FALSE;
@@ -459,6 +502,12 @@ BYTE command_stop_cont(void)
 
 BYTE command_set_led_h(void)
 {
+	if (1 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	SET_LED_H();
 
 	cReplyBuffer[0] = 'h';
@@ -469,6 +518,12 @@ BYTE command_set_led_h(void)
 
 BYTE command_set_led_l(void)
 {
+	if (1 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	SET_LED_L();
 
 	cReplyBuffer[0] = 'l';
@@ -481,6 +536,12 @@ BYTE command_set_gain(char *pCommand)
 {
 	BYTE gain = HEX_TO_BYTE(*(pCommand + 1));
 	BYTE reference = HEX_TO_BYTE(*(pCommand + 2));
+
+	if (3 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
 
 	// gain: 0 ~ 15 (x1.00 ~ x48.0)
 	if (gain > 15) {
@@ -527,6 +588,12 @@ BYTE command_set_gain(char *pCommand)
 
 BYTE command_reboot(void)
 {
+	if (1 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	bQuitRequested = TRUE;
 
 	cReplyBuffer[0] = 'Q';
@@ -622,8 +689,6 @@ void send_din_values(void)
 {
 	BYTE length = 0;
 	BYTE value = 0;
-
-//	PRT0DR |= 0x55;	// let's pull-up all DIN ports
 
 	value += GET_DIN_1() ? 0x01 : 0x00;
 	value += GET_DIN_2() ? 0x02 : 0x00;

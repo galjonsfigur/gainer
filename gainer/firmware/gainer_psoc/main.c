@@ -11,8 +11,8 @@ WORD bContinuousAinMask = 0x0000;
 BOOL bContinuousDinRequested = FALSE;
 BOOL bQuitRequested = FALSE;
 BYTE bCurrentConfig = CONFIG_START;
-//BYTE bRequestedConfig = CONFIG_START;
-BYTE bRequestedConfig = CONFIG_A;
+BYTE bRequestedConfig = CONFIG_START;
+//BYTE bRequestedConfig = CONFIG_A;
 
 char cReplyBuffer[32];
 
@@ -48,6 +48,7 @@ BYTE bChannels_DOUT = 0;
  * private functions of CONFIG_START
  */
 void handle_commands_config_start(void);
+BYTE handle_config_command(char *pCommand);
 
 void main()
 {
@@ -149,10 +150,37 @@ void Main_Config_Start()
 	handle_commands_config_start();
 }
 
-BYTE HandleConfigCommand(char *pCommand)
+void handle_commands_config_start()
+{
+	char * pCommand;						// Parameter pointer
+
+	if (UART_bCmdCheck()) {					// Wait for command    
+		if(pCommand = UART_szGetParam()) {
+			switch (*pCommand) {
+				case 'C':
+					UART_Write(cReplyBuffer, handle_config_command(pCommand));
+					break;
+				
+				default:
+					break;
+			}
+		}
+		UART_CmdReset();					// Reset command buffer
+	}
+}
+
+BYTE handle_config_command(char *pCommand)
 {
 	char * p = pCommand;
 	BYTE bNumBytes = 0;
+
+	if (2 != UART_bCmdLength()) {
+		// seems to be an invalid command
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		bNumBytes = 2;
+		return bNumBytes;
+	}
 
 	p++;
 	switch (*p) {
@@ -189,25 +217,6 @@ BYTE HandleConfigCommand(char *pCommand)
 	}
 
 	return bNumBytes;
-}
-
-void handle_commands_config_start()
-{
-	char * pCommand;						// Parameter pointer
-
-	if (UART_bCmdCheck()) {					// Wait for command    
-		if(pCommand = UART_szGetParam()) {
-			switch (*pCommand) {
-				case 'C':
-					UART_Write(cReplyBuffer, HandleConfigCommand(pCommand));
-					break;
-				
-				default:
-					break;
-			}
-		}
-		UART_CmdReset();					// Reset command buffer
-	}
 }
 
 const char cHexString[16] = "0123456789ABCDEF";

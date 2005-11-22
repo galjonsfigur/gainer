@@ -51,8 +51,6 @@ void Enter_Config_Start(void);
 void Exit_Config_Start(void);
 void Main_Config_Start(void);
 
-BYTE HandleConfigCommand(char *strPtr);
-
 /**
  * public functions of CONFIG_A
  * implemented in config_a.c

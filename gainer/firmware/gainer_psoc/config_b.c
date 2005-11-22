@@ -48,10 +48,6 @@ void handle_commands_config_b(void)
 	if (UART_B_bCmdCheck()) {				// Wait for command    
 		if(pCommand = UART_B_szGetParam()) {
 			switch (*pCommand) {
-				case 'C':
-					UART_B_Write(cReplyBuffer, HandleConfigCommand(pCommand));
-					break;
-				
 				default:
 					break;
 			}
