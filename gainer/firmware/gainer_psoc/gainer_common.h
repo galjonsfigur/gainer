@@ -10,24 +10,28 @@
 /**
  * common I/O Pin Definitions
  */
-#define GET_DIN_1() (PRT0DR&0x40)	// P0[6]	was P0[0]
-#define GET_DIN_2() (PRT0DR&0x10)	// P0[4]	was P0[2]
-#define GET_DIN_3() (PRT0DR&0x04)	// P0[2]	was P0[4]
-#define GET_DIN_4() (PRT0DR&0x01)	// P0[0]	was P0[6]
+#define GET_DIN_1() (PRT0DR&0x40)	// P0[6]
+#define GET_DIN_2() (PRT0DR&0x10)	// P0[4]
+#define GET_DIN_3() (PRT0DR&0x04)	// P0[2]
+#define GET_DIN_4() (PRT0DR&0x01)	// P0[0]
 
-#define SET_DOUT_1_H() PRT2DR|=0x01	// P2[0]	was P1[2]
-#define SET_DOUT_2_H() PRT1DR|=0x40	// P1[6]	was P1[4]
-#define SET_DOUT_3_H() PRT1DR|=0x10	// P1[4]	was P1[6]
-#define SET_DOUT_4_H() PRT1DR|=0x04	// P2[2]	was P2[0]
+// NOTE: P1[5] is pull-downed, so should be always ZERO!!!
+#define SET_DOUT_1_H() (PRT2DR|=0x01)				// P2[0]
+#define SET_DOUT_2_H() (PRT1DR=(PRT1DR&0xDF)|0x40)	// P1[6]
+#define SET_DOUT_3_H() (PRT1DR=(PRT1DR&0xDF)|0x10)	// P1[4]
+#define SET_DOUT_4_H() (PRT1DR=(PRT1DR&0xDF)|0x04)	// P1[2]
 
-#define SET_DOUT_1_L() PRT2DR&=0xFE	// P2[0]	was P1[2]
-#define SET_DOUT_2_L() PRT1DR&=0xBF	// P1[6]	was P1[4]
-#define SET_DOUT_3_L() PRT1DR&=0xEF	// P1[4]	was P1[6]
-#define SET_DOUT_4_L() PRT1DR&=0xFB	// P2[2]	was P2[0]
+// NOTE: P1[5]  is pull-downed, so should be always ZERO!!!
+#define SET_DOUT_1_L() (PRT2DR&=0xFE)	// P2[0]
+#define SET_DOUT_2_L() (PRT1DR&=0x9F)	// P1[6]
+#define SET_DOUT_3_L() (PRT1DR&=0xCF)	// P1[4]
+#define SET_DOUT_4_L() (PRT1DR&=0xDB)	// P1[2]
 
-#define GET_BUTTON() (PRT1DR&0x20)	// P1[5]
-#define SET_LED_H() PRT1DR|=0x80	// P1[7]
-#define SET_LED_L() PRT1DR&=0x7F	// P1[7]
+#define GET_BUTTON() (PRT1DR&0x20)				// P1[5]
+
+// NOTE: P1[5]  is pull-downed, so should be always ZERO!!!
+#define SET_LED_H() (PRT1DR=(PRT1DR&0xDF)|0x80)	// P1[7]
+#define SET_LED_L() (PRT1DR&=0x5F)				// P1[7]
 
 /**
  * global definitions

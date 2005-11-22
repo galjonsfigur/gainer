@@ -21,8 +21,8 @@ const int LastBlock_To_Check = LAST_BLOCK_TO_CHECK;
 #define SETBUTTON()	PRT1DR|=0x20	// pull up for button on P1[5] pin (was PRT0DR|=0x20)
 #endif
 #define GETBUTTON() (PRT1DR&0x20)		// get value on button pin (P1[5], was PRT0DR&0x20)
-#define BOOTLOADER_MODE_LED_ON() PRT1DR|=0x80	// (P1[7], was PRT1DR|=0x80)
-#define BOOTLOADER_MODE_LED_OFF() PRT1DR&=0x7F	// (P1[7], was PRT1DR&=0x7F)
+#define BOOTLOADER_MODE_LED_ON() (PRT1DR=(PRT1DR&0xDF)|0x80)	// (P1[7], was PRT1DR|=0x80)
+#define BOOTLOADER_MODE_LED_OFF() (PRT1DR&=0x5F)				// (P1[7], was PRT1DR&=0x7F)
 
 //extern void Boot_LoadConfigInit(void);
 extern char FlashCheckSum(int);
@@ -145,6 +145,7 @@ void BootLoader(){
 	char CheckSum;
     char strConnect[8];//={'C','O','N','N','E','C','T','\0'};
     char strAnswer[4];//={'O','K','!','\0'};
+
 	// Initiate communications Strings:
     // strConnect[]="CONNECT", // Initiate string form PC
     // strAnswer[]="OK!";      // Answer to PC
@@ -193,6 +194,7 @@ void BootLoader(){
          if (CheckSum!=FlashCheckSum(j)) Error=1;	// Set CheckSum Error Flag
       }  
     }  
+
     // Check button to enter bootloader mode
 #ifdef BUTTON_IS_PULL_UP
     SETBUTTON();		// pull up for Button
