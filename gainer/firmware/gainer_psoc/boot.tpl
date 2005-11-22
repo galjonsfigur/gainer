@@ -1,13 +1,13 @@
-;@Id: boot.tpl#101 @
+;@Id: boot.tpl#102 @
 ;=============================================================================
 ;  FILENAME:   boot.asm
-;  VERSION:    4.15
-;  DATE:       2 August 2004
+;  VERSION:    4.16
+;  DATE:       6 October 2005
 ;
 ;  DESCRIPTION:
 ;  M8C Boot Code for CY8C29xxx microcontroller family.
 ;
-;  Copyright (C) Cypress MicroSystems 2000-2004. All rights reserved.
+;  Copyright (C) Cypress Semiconductor 2000-2005. All rights reserved.
 ;
 ; NOTES:
 ; PSoC Designer's Device Editor uses a template file, BOOT.TPL, located in
