@@ -11,8 +11,8 @@ WORD bContinuousAinMask = 0x0000;
 BOOL bContinuousDinRequested = FALSE;
 BOOL bQuitRequested = FALSE;
 BYTE bCurrentConfig = CONFIG_START;
-BYTE bRequestedConfig = CONFIG_START;
-//BYTE bRequestedConfig = CONFIG_A;
+//BYTE bRequestedConfig = CONFIG_START;
+BYTE bRequestedConfig = CONFIG_A;
 
 char cReplyBuffer[32];
 
@@ -139,8 +139,11 @@ void Exit_Config_Start()
 
 	// SHOULD HANDLE I2C HERE IN THE NEAR FUTURE!?
 
-	M8C_DisableGInt;
+	WaitForBriefSpells();
 	UART_Stop();
+	WaitForBriefSpells();
+
+	M8C_DisableGInt;
 
 	UnloadConfig_gainer();
 }
@@ -162,6 +165,10 @@ void handle_commands_config_start()
 					break;
 				
 				default:
+					// seems to be an invalid command
+					cReplyBuffer[0] = '!';
+					cReplyBuffer[1] = '*';
+					UART_Write(cReplyBuffer, 2);
 					break;
 			}
 		}
@@ -233,4 +240,14 @@ void ByteToHex(BYTE value, char *str)
 	str++;
 	v = value;
 	*str = cHexString[v & 0x0F];
+}
+
+void WaitForBriefSpells(void)
+{
+	INT i;
+	float j;
+
+	for (i = 0; i < 1000; i++) {
+		j = (float)i / 100.0;
+	}
 }
