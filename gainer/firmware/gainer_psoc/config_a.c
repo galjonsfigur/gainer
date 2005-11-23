@@ -9,6 +9,7 @@ extern BYTE bRequestedConfig;
  * private functions of CONFIG_A
  */
 void handle_commands_config_a(void);
+BYTE command_set_config(char *pCommand);
 BYTE command_set_dout_all(char *pCommand);
 BYTE command_set_dout_h(char *pCommand);
 BYTE command_set_dout_l(char *pCommand);
@@ -184,6 +185,10 @@ void handle_commands_config_a(void)
 	if (UART_A_bCmdCheck()) {				// Wait for command    
 		if(pCommand = UART_A_szGetParam()) {
 			switch (*pCommand) {
+				case 'C':	// set configuration
+					bNumBytes = command_set_config(pCommand);
+					break;
+				
 				case 'D':	// set all digital outputs (Dxx)
 					bNumBytes = command_set_dout_all(pCommand);
 					break;
@@ -263,6 +268,39 @@ void handle_commands_config_a(void)
 
 		UART_A_CmdReset();					// Reset command buffer
 	}
+}
+
+BYTE command_set_config(char *pCommand)
+{
+	char * p = pCommand;
+	BYTE bNumBytes = 0;
+
+	if (2 != UART_A_bCmdLength()) {
+		// seems to be an invalid command
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		bNumBytes = 2;
+		return bNumBytes;
+	}
+
+	p++;
+	switch (*p) {
+		case '1':	// i.e. 'C1'
+			cReplyBuffer[0] = 'C';
+			cReplyBuffer[1] = '1';
+			cReplyBuffer[2] = '*';
+			bNumBytes = 3;
+			break;
+
+		default:
+			// seems to be an invalid command
+			cReplyBuffer[0] = '!';
+			cReplyBuffer[1] = '*';
+			bNumBytes = 2;
+			break;
+	}
+
+	return bNumBytes;
 }
 
 BYTE command_set_dout_all(char *pCommand)
