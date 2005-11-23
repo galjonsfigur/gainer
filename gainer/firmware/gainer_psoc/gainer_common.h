@@ -91,4 +91,6 @@ extern BYTE bChannels_DOUT;
 
 void ByteToHex(BYTE value, char *str);
 
+void WaitForBriefSpells(void);
+
 #endif
