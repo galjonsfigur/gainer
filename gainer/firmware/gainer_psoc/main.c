@@ -7,12 +7,11 @@
 #include "gainer_common.h"
 
 BOOL bContinuousAinRequested = FALSE;
-WORD bContinuousAinMask = 0x0000;
+BYTE bContinuousAinMask = 0x0000;
 BOOL bContinuousDinRequested = FALSE;
 BOOL bQuitRequested = FALSE;
 BYTE bCurrentConfig = CONFIG_START;
-//BYTE bRequestedConfig = CONFIG_START;
-BYTE bRequestedConfig = CONFIG_A;
+BYTE bRequestedConfig = CONFIG_START;
 
 char cReplyBuffer[32];
 
@@ -35,7 +34,9 @@ const BYTE bGainTable[16] = {
 	PGA_A_1_G48_0,	// GFx
 };
 
-WORD bAdcValue[16];
+const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
+
+WORD wAdcValue[16];
 BYTE bAdcChannelNumber;
 BYTE bAdcFlags;
 
@@ -49,6 +50,7 @@ BYTE bChannels_DOUT = 0;
  */
 void handle_commands_config_start(void);
 BYTE handle_config_command(char *pCommand);
+BYTE command_reboot(void);
 
 void main()
 {
@@ -60,11 +62,14 @@ void main()
 				Main_Config_Start();
 				break;
 
-			case CONFIG_A:
+			case CONFIG_1:
+			case CONFIG_2:
+			case CONFIG_3:
 				Main_Config_A();
 				break;
 
-			case CONFIG_B:
+			case CONFIG_4:
+			case CONFIG_5:
 				Main_Config_B();
 				break;
 
@@ -72,43 +77,29 @@ void main()
 				break;
 		}
 
-		if (bCurrentConfig != bRequestedConfig) {
+		if (bQuitRequested) {
+			WaitForBriefSpells();
+
 			switch (bCurrentConfig) {
 				case CONFIG_START:
 					Exit_Config_Start();
 					break;
-
-				case CONFIG_A:
+	
+				case CONFIG_1:
+				case CONFIG_2:
+				case CONFIG_3:
 					Exit_Config_A();
 					break;
-
-				case CONFIG_B:
+	
+				case CONFIG_4:
+				case CONFIG_5:
 					Exit_Config_B();
 					break;
 
-				default:
-					break;
-			}
-
-			switch (bRequestedConfig) {
-				case CONFIG_START:
-					Enter_Config_Start();
-					break;
-
-				case CONFIG_A:
-					Enter_Config_A();
-					break;
-
-				case CONFIG_B:
-					Enter_Config_B();
-					break;
-
-				default:
-					break;
-			}
+			default:
+				break;
 		}
 
-		if (bQuitRequested) {
 			M8C_Reset;
 		}
 	}
@@ -121,10 +112,17 @@ void Enter_Config_Start()
 	LoadConfig_gainer();
 
 	M8C_EnableGInt;
+
 	UART_IntCntl(UART_ENABLE_RX_INT);
 	UART_Start(UART_PARITY_NONE);
 
-	// SHOULD HANDLE I2C HERE IN THE NEAR FUTURE!?
+	// set drive mode of P2[6] (TxD) to 'Strong'
+	// DM[2:0] = '001' (Strong)
+	PRT2DM2 &= ~0x40;
+	PRT2DM1 &= ~0x40;
+	PRT2DM0 |= 0x40;
+
+	UART_CPutString("!!!*");
 
 #if SERIAL_DEBUG_ENABLED
 	UART_CPutString("\r\nEnter_Config_Start()\r\n");
@@ -137,11 +135,13 @@ void Exit_Config_Start()
 	UART_CPutString("\r\nExit_Config_Start()\r\n");
 #endif
 
-	// SHOULD HANDLE I2C HERE IN THE NEAR FUTURE!?
-
-	WaitForBriefSpells();
 	UART_Stop();
-	WaitForBriefSpells();
+
+	// set drive mode of P2[6] (TxD) to 'High-Z Analog'
+	// DM[2:0] = '110' (High-Z Analog)
+	PRT2DM2 |= 0x40;
+	PRT2DM1 |= 0x40;
+	PRT2DM0 &= ~0x40;
 
 	M8C_DisableGInt;
 
@@ -151,6 +151,50 @@ void Exit_Config_Start()
 void Main_Config_Start()
 {
 	handle_commands_config_start();
+
+	if (bCurrentConfig == bRequestedConfig) {
+		return;	// have nothing to do :)
+	}
+
+	switch (bCurrentConfig) {
+		case CONFIG_START:
+			Exit_Config_Start();
+			break;
+
+		case CONFIG_1:
+		case CONFIG_2:
+		case CONFIG_3:
+			Exit_Config_A();
+			break;
+
+		case CONFIG_4:
+		case CONFIG_5:
+			Exit_Config_B();
+			break;
+
+		default:
+			break;
+	}
+
+	switch (bRequestedConfig) {
+		case CONFIG_START:
+			Enter_Config_Start();
+			break;
+
+		case CONFIG_1:
+		case CONFIG_2:
+		case CONFIG_3:
+			Enter_Config_A();
+			break;
+
+		case CONFIG_4:
+		case CONFIG_5:
+			Enter_Config_B();
+			break;
+
+		default:
+			break;
+	}
 }
 
 void handle_commands_config_start()
@@ -160,8 +204,14 @@ void handle_commands_config_start()
 	if (UART_bCmdCheck()) {					// Wait for command    
 		if(pCommand = UART_szGetParam()) {
 			switch (*pCommand) {
-				case 'C':
+				case 'K':
 					UART_Write(cReplyBuffer, handle_config_command(pCommand));
+					WaitForBriefSpells();
+					break;
+				
+				case 'Q':	// reboot (Q)
+					UART_Write(cReplyBuffer, command_reboot());
+					WaitForBriefSpells();
 					break;
 				
 				default:
@@ -180,50 +230,87 @@ BYTE handle_config_command(char *pCommand)
 {
 	char * p = pCommand;
 	BYTE bNumBytes = 0;
+	BYTE i = 0;
 
-	if (2 != UART_bCmdLength()) {
+	// check command length
+	if ((sizeof(cConfigCommandPrefix) + 1) != UART_bCmdLength()) {
 		// seems to be an invalid command
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		bNumBytes = 2;
 		return bNumBytes;
 	}
 
-	p++;
+	// check command prefix
+	for (i = 0; i < sizeof(cConfigCommandPrefix); i++) {
+		if (cConfigCommandPrefix[i] != (*p)) {
+			PutErrorStringToReplyBuffer();
+			bNumBytes = 2;
+			return bNumBytes;
+		}
+
+		p++;
+	}
+
+	for (i = 0; i < sizeof(cConfigCommandPrefix); i++) {
+		cReplyBuffer[i] = cConfigCommandPrefix[i];
+	}
+
+	cReplyBuffer[i] = (*p);
+	i++;
+	cReplyBuffer[i] = '*';
+
+	bNumBytes = sizeof(cConfigCommandPrefix) + 2;
+
 	switch (*p) {
-		case '0':	// i.e. 'C0'
+		case '0':	// i.e. 'KONFIGURATION_0'
 			bRequestedConfig = CONFIG_START;
-			cReplyBuffer[0] = 'C';
-			cReplyBuffer[1] = '0';
-			cReplyBuffer[2] = '*';
-			bNumBytes = 3;
 			break;
 
-		case '1':	// i.e. 'C1'
-			bRequestedConfig = CONFIG_A;
-			cReplyBuffer[0] = 'C';
-			cReplyBuffer[1] = '1';
-			cReplyBuffer[2] = '*';
-			bNumBytes = 3;
+		case '1':	// i.e. 'KONFIGURATION_1'
+			bRequestedConfig = CONFIG_1;
 			break;
 
-		case '2':	// i.e. 'C2'
-			bRequestedConfig = CONFIG_B;
-			cReplyBuffer[0] = 'C';
-			cReplyBuffer[1] = '2';
-			cReplyBuffer[2] = '*';
-			bNumBytes = 3;
+		case '2':	// i.e. 'KONFIGURATION_2'
+			bRequestedConfig = CONFIG_2;
+			break;
+
+		case '3':	// i.e. 'KONFIGURATION_3'
+			bRequestedConfig = CONFIG_3;
+			break;
+
+		case '4':	// i.e. 'KONFIGURATION_4'
+			bRequestedConfig = CONFIG_4;
+			break;
+
+		case '5':	// i.e. 'KONFIGURATION_5'
+			bRequestedConfig = CONFIG_5;
 			break;
 
 		default:
 			// seems to be an invalid command
-			cReplyBuffer[0] = '!';
-			cReplyBuffer[1] = '*';
+			// replace the reply buffer with error string
+			PutErrorStringToReplyBuffer();
 			bNumBytes = 2;
 			break;
 	}
 
 	return bNumBytes;
+}
+
+BYTE command_reboot(void)
+{
+	if (1 != UART_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
+	bQuitRequested = TRUE;
+
+	cReplyBuffer[0] = 'Q';
+	cReplyBuffer[1] = '*';
+
+	return 2;
 }
 
 const char cHexString[16] = "0123456789ABCDEF";
@@ -247,7 +334,13 @@ void WaitForBriefSpells(void)
 	INT i;
 	float j;
 
-	for (i = 0; i < 1000; i++) {
+	for (i = 0; i < 100; i++) {
 		j = (float)i / 100.0;
 	}
+}
+
+void PutErrorStringToReplyBuffer(void)
+{
+	cReplyBuffer[0] = '!';
+	cReplyBuffer[1] = '*';
 }

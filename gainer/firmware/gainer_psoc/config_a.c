@@ -8,21 +8,24 @@ extern BYTE bRequestedConfig;
 /**
  * private functions of CONFIG_A
  */
+void handle_ain_event(void);
+void handle_button_event(void);
 void handle_commands_config_a(void);
-BYTE command_set_config(char *pCommand);
+
 BYTE command_set_dout_all(char *pCommand);
 BYTE command_set_dout_h(char *pCommand);
 BYTE command_set_dout_l(char *pCommand);
-BYTE command_get_din_all(char *pCommand, BOOL bContinuous);
 BYTE command_set_aout_all(char *pCommand);
 BYTE command_set_aout_ch(char *pCommand);
+BYTE command_get_din_all(char *pCommand, BOOL bContinuous);
 BYTE command_get_ain_all(char *pCommand, BOOL bContinuous);
 BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous);
 BYTE command_stop_cont(void);
 BYTE command_set_led_h(void);
 BYTE command_set_led_l(void);
 BYTE command_set_gain(char *pCommand);
-BYTE command_reboot(void);
+
+BYTE command_reboot_a(void);
 
 BOOL set_aout(BYTE channel, BYTE value);
 BOOL set_dout(BYTE channel, BOOL value);
@@ -40,74 +43,184 @@ void Enter_Config_A(void)
 {
 	BYTE i = 0;
 
-	bCurrentConfig = CONFIG_A;
+	bCurrentConfig = bRequestedConfig;
 
 	LoadConfig_config_a();
 
 	bContinuousAinRequested = FALSE;
-	bContinuousAinMask = 0x0000;
+	bContinuousAinMask = 0x00;
 	bContinuousDinRequested = FALSE;
 
 	bAdcChannelNumber = 0;
 
-	bChannels_AIN = 4;
-	bChannels_AOUT = 4;
-	bChannels_DIN = 4;
-	bChannels_DOUT = 4;
+	switch (bCurrentConfig) {
+		case CONFIG_2:
+			// consigure number of each port type
+			bChannels_AIN = 8;
+			bChannels_DIN = 0;
+			bChannels_AOUT = 4;
+			bChannels_DOUT = 4;
+
+			// change drive mode of *in 1~8 to 'High-Z Analog' (DM[2:0] = '110')
+			PRT0DM2 = 0xFF;
+			PRT0DM1 = 0xFF;
+			PRT0DM0 = 0x00;
+			// change select of *in 1~8 to 'Analog'
+			// <nothing to do!?>
+			break;
+/*
+		case CONFIG_3:
+			// consigure number of each port type
+			bChannels_AIN = 0;
+			bChannels_DIN = 8;
+			bChannels_AOUT = 4;
+			bChannels_DOUT = 4;
+
+			// change drive mode of *in 1~8 to 'Pull Down' (DM[2:0] = '000')
+			PRT0DM2 = 0x00;
+			PRT0DM1 = 0x00;
+			PRT0DM0 = 0x00;
+			// change select of *in 1~8 to 'StdCPU'
+			// <nothing to do!?>
+			break;
+*/
+		case CONFIG_3:
+			// consigure number of each port type
+			bChannels_AIN = 4;
+			bChannels_DIN = 4;
+			bChannels_AOUT = 8;
+			bChannels_DOUT = 0;
+
+			// connect PWM8 modules to *out 5~8
+			// enable global select (enable global bypass)
+			PRT1GS |= 0x54;		// connect P1[2], P1[4] and P1[6] to global bus
+			PRT2GS |= 0x01;		// connect P2[0] to global bus
+			break;
+/*
+		case CONFIG_5:
+			// consigure number of each port type
+			bChannels_AIN = 4;
+			bChannels_DIN = 4;
+			bChannels_AOUT = 0;
+			bChannels_DOUT = 8;
+
+			// disconnect PWM8 modules from *out 1~4
+			// disable global select (disable global bypass)
+			PRT2GS &= 0x55;		// disconnect P2[1], P2[3], P2[5] and P2[7] from global bus
+			break;
+*/
+		default:
+			bChannels_AIN = 4;
+			bChannels_DIN = 4;
+			bChannels_AOUT = 4;
+			bChannels_DOUT = 4;
+			break;
+	}
 
 	// start UART
 //	UART_A_IntCntl(UART_A_ENABLE_RX_INT | UART_A_ENABLE_TX_INT);
 	UART_A_IntCntl(UART_A_ENABLE_RX_INT);
 	UART_A_Start(UART_A_PARITY_NONE);
 
+	// set drive mode of P2[6] (TxD) to 'Strong'
+	// DM[2:0] = '001' (Strong)
+	PRT2DM2 &= ~0x40;
+	PRT2DM1 &= ~0x40;
+	PRT2DM0 |= 0x40;
+
 	// start analog inputs
 	AMUX4_A_1_Start();
 	AMUX4_A_2_Start();
-	AMUX4_A_2_InputSelect(bAdcChannelNumber);
+//	AMUX4_A_2_InputSelect(bAdcChannelNumber);
 	PGA_A_1_SetGain(bGainTable[0]);
 	PGA_A_2_SetGain(bGainTable[0]);
 	PGA_A_1_Start(PGA_A_1_LOWPOWER);		// see the module datasheet
 	PGA_A_2_Start(PGA_A_2_LOWPOWER);		// might be good lpf!?
 	DUALADC_A_Start(DUALADC_A_HIGHPOWER);	// try lower power later
-	DUALADC_A_GetSamples(0);	// continuous sampling
+//	DUALADC_A_GetSamples(0);	// continuous sampling
 
+#if 0
 	// start analog outputs
-	Counter16_A_PWMClk_WritePeriod(155);
+	Counter16_A_PWMClk_WritePeriod(155);	// 50Hz (i.e. 20ms)
 	Counter16_A_PWMClk_WriteCompareValue(0);
 	Counter16_A_PWMClk_Start();
+
+	// set period of all PWM8 modules to 255
 	PWM8_A_1_WritePeriod(255);
 	PWM8_A_2_WritePeriod(255);
 	PWM8_A_3_WritePeriod(255);
 	PWM8_A_4_WritePeriod(255);
+	PWM8_A_5_WritePeriod(255);
+	PWM8_A_6_WritePeriod(255);
+	PWM8_A_7_WritePeriod(255);
+	PWM8_A_8_WritePeriod(255);
+#else
+	// start analog outputs
+	Counter16_A_PWMClk_WritePeriod(157);	// 50Hz (i.e. 20ms)
+	Counter16_A_PWMClk_WriteCompareValue(0);
+	Counter16_A_PWMClk_Start();
+
+	// set period of all PWM8 modules to 254
+	// NOTE: THIS IS JUST AN WORKSROUND!!!
+	PWM8_A_1_WritePeriod(254);
+	PWM8_A_2_WritePeriod(254);
+	PWM8_A_3_WritePeriod(254);
+	PWM8_A_4_WritePeriod(254);
+	PWM8_A_5_WritePeriod(254);
+	PWM8_A_6_WritePeriod(254);
+	PWM8_A_7_WritePeriod(254);
+	PWM8_A_8_WritePeriod(254);
+#endif
+
+	// set pulse width of all PWM8 modules to 0
 	PWM8_A_1_WritePulseWidth(0);
 	PWM8_A_2_WritePulseWidth(0);
 	PWM8_A_3_WritePulseWidth(0);
 	PWM8_A_4_WritePulseWidth(0);
-	PWM8_A_1_Start();
-	PWM8_A_2_Start();
-	PWM8_A_3_Start();
-	PWM8_A_4_Start();
+	PWM8_A_5_WritePulseWidth(0);
+	PWM8_A_6_WritePulseWidth(0);
+	PWM8_A_7_WritePulseWidth(0);
+	PWM8_A_8_WritePulseWidth(0);
+
+	// enable used analog (actually PWM) outputs
+	switch (bChannels_AOUT) {
+		case 4:
+			PWM8_A_1_Start();
+			PWM8_A_2_Start();
+			PWM8_A_3_Start();
+			PWM8_A_4_Start();
+			break;
+
+		case 8:
+			PWM8_A_1_Start();
+			PWM8_A_2_Start();
+			PWM8_A_3_Start();
+			PWM8_A_4_Start();
+			PWM8_A_5_Start();
+			PWM8_A_6_Start();
+			PWM8_A_7_Start();
+			PWM8_A_8_Start();
+			break;
+
+		default:
+			break;
+	}
 
 	M8C_EnableGInt;
-
-	// SHOULD HANDLE I2C HERE IN THE NEAR FUTURE!?
-
-#if SERIAL_DEBUG_ENABLED
-	UART_A_CPutString("\r\nEnter_Config_A()\r\n");
-#endif
 }
 
 void Exit_Config_A(void)
 {
-#if SERIAL_DEBUG_ENABLED
-	UART_A_CPutString("\r\nExit_Config_A()\r\n");
-#endif
-
-	// SHOULD HANDLE I2C HERE IN THE NEAR FUTURE!?
-
 	M8C_DisableGInt;
+
 	// stop UART
 	UART_A_Stop();
+
+	// set drive mode of P2[6] (TxD) to 'High-Z Analog'
+	// DM[2:0] = '110' (High-Z Analog)
+	PRT2DM2 |= 0x40;
+	PRT2DM1 |= 0x40;
+	PRT2DM0 &= ~0x40;
 
 	// stop analog inputs
 	AMUX4_A_1_Stop();
@@ -122,43 +235,67 @@ void Exit_Config_A(void)
 	PWM8_A_2_Stop();
 	PWM8_A_3_Stop();
 	PWM8_A_4_Stop();
+	PWM8_A_5_Stop();
+	PWM8_A_6_Stop();
+	PWM8_A_7_Stop();
+	PWM8_A_8_Stop();
 
 	UnloadConfig_config_a();
 }
 
 void Main_Config_A(void)
 {
-	WORD i;
+	handle_ain_event();
+	handle_button_event();
+	handle_commands_config_a();
+}
 
-	AMUX4_A_1_InputSelect(bAdcChannelNumber);
+void handle_ain_event(void)
+{
+	AMUX4_A_1_InputSelect(bAdcChannelNumber);	// ain 1~4
+	AMUX4_A_2_InputSelect(bAdcChannelNumber);	// ain 5~8
 	
 	DUALADC_A_GetSamples(1);	// continuous sampling
-	while(DUALADC_A_fIsDataAvailable() == 0);  // Wait for data to be ready 
-	bAdcValue[bAdcChannelNumber] = DUALADC_A_iGetData1ClearFlag(); 
-		
+	while(DUALADC_A_fIsDataAvailable() == 0);  // Wait for data to be ready
+	wAdcValue[bAdcChannelNumber] = DUALADC_A_iGetData1ClearFlag();		// ain 1~4
+	wAdcValue[bAdcChannelNumber + 4] = DUALADC_A_iGetData2ClearFlag();	// ain 5~8
+
 	bAdcChannelNumber++;
 	if (bAdcChannelNumber == 4) {
-		bAdcChannelNumber=0;
-		bAdcFlags|=0x01;
+		bAdcChannelNumber = 0;
+		bAdcFlags |= 0x01;
 	}
 
 	// Check if all the 4 channels have been measured
 	if (bAdcFlags & 0x01) {
-		b_ain[3] = (BYTE)(bAdcValue[0] & 0x00FF);
-		b_ain[2] = (BYTE)(bAdcValue[1] & 0x00FF);
-		b_ain[1] = (BYTE)(bAdcValue[2] & 0x00FF);
-		b_ain[0] = (BYTE)(bAdcValue[3] & 0x00FF);
+		// ain 1~4
+		b_ain[3] = (BYTE)(wAdcValue[0] & 0x00FF);
+		b_ain[2] = (BYTE)(wAdcValue[1] & 0x00FF);
+		b_ain[1] = (BYTE)(wAdcValue[2] & 0x00FF);
+		b_ain[0] = (BYTE)(wAdcValue[3] & 0x00FF);
+
+		// ain 5~8
+		b_ain[7] = (BYTE)(wAdcValue[4] & 0x00FF);
+		b_ain[6] = (BYTE)(wAdcValue[5] & 0x00FF);
+		b_ain[5] = (BYTE)(wAdcValue[6] & 0x00FF);
+		b_ain[4] = (BYTE)(wAdcValue[7] & 0x00FF);
+
 		bAdcFlags &= ~0x01;
-	}
 
-	if (bContinuousAinRequested) {
-		send_ain_values();
-	}
+		// send ain data when measured all channels
+		if (bContinuousAinRequested) {
+			send_ain_values();
+		}
 
-	if (bContinuousDinRequested) {
-		send_din_values();	
+		// send din data here to avaiod stupid sending
+		if (bContinuousDinRequested) {
+			send_din_values();
+		}
 	}
+}
 
+void handle_button_event(void)
+{
 	bButtonIsOn = GET_BUTTON();
 
 	if (bButtonIsOn != bButtonWasOn) {
@@ -168,13 +305,6 @@ void Main_Config_A(void)
 	}
 
 	bButtonWasOn = bButtonIsOn;
-
-	// reset Rx buffer if it seems to be broken
-	if (UART_A_bErrCheck()) {
-		UART_A_CmdReset();
-	}
-
-	handle_commands_config_a();
 }
 
 void handle_commands_config_a(void)
@@ -182,13 +312,15 @@ void handle_commands_config_a(void)
 	char * pCommand;						// Parameter pointer
 	BYTE bNumBytes = 0;
 
+	// reset Rx buffer if it seems to be broken
+	if (UART_A_bErrCheck()) {
+		UART_A_CmdReset();
+		return;
+	}
+
 	if (UART_A_bCmdCheck()) {				// Wait for command    
 		if(pCommand = UART_A_szGetParam()) {
 			switch (*pCommand) {
-				case 'C':	// set configuration
-					bNumBytes = command_set_config(pCommand);
-					break;
-				
 				case 'D':	// set all digital outputs (Dxx)
 					bNumBytes = command_set_dout_all(pCommand);
 					break;
@@ -250,7 +382,7 @@ void handle_commands_config_a(void)
 					break;
 				
 				case 'Q':	// reboot (Q)
-					bNumBytes = command_reboot();
+					bNumBytes = command_reboot_a();
 					break;
 				
 				default:
@@ -270,39 +402,6 @@ void handle_commands_config_a(void)
 	}
 }
 
-BYTE command_set_config(char *pCommand)
-{
-	char * p = pCommand;
-	BYTE bNumBytes = 0;
-
-	if (2 != UART_A_bCmdLength()) {
-		// seems to be an invalid command
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
-		bNumBytes = 2;
-		return bNumBytes;
-	}
-
-	p++;
-	switch (*p) {
-		case '1':	// i.e. 'C1'
-			cReplyBuffer[0] = 'C';
-			cReplyBuffer[1] = '1';
-			cReplyBuffer[2] = '*';
-			bNumBytes = 3;
-			break;
-
-		default:
-			// seems to be an invalid command
-			cReplyBuffer[0] = '!';
-			cReplyBuffer[1] = '*';
-			bNumBytes = 2;
-			break;
-	}
-
-	return bNumBytes;
-}
-
 BYTE command_set_dout_all(char *pCommand)
 {
 	BYTE value = 0;
@@ -316,10 +415,28 @@ BYTE command_set_dout_all(char *pCommand)
 	value = HEX_TO_BYTE(*(pCommand + 1));
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 2));
 
-	set_dout(3, (value & 0x08));
-	set_dout(2, (value & 0x04));
-	set_dout(1, (value & 0x02));
-	set_dout(0, (value & 0x01));
+	switch (bChannels_DOUT) {
+		case 4:
+			set_dout(3, (value & 0x08));
+			set_dout(2, (value & 0x04));
+			set_dout(1, (value & 0x02));
+			set_dout(0, (value & 0x01));
+			break;
+
+		case 8:
+			set_dout(7, (value & 0x80));
+			set_dout(6, (value & 0x40));
+			set_dout(5, (value & 0x20));
+			set_dout(4, (value & 0x10));
+			set_dout(3, (value & 0x08));
+			set_dout(2, (value & 0x04));
+			set_dout(1, (value & 0x02));
+			set_dout(0, (value & 0x01));
+			break;
+
+		default:
+			break;
+	}
 
 	cReplyBuffer[0] = 'D';
 	cReplyBuffer[1] = *(pCommand + 1);
@@ -334,6 +451,12 @@ BYTE command_set_dout_h(char *pCommand)
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
 	if (2 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
+	if (bChannels_DOUT < 1) {
 		cReplyBuffer[0] = '!';
 		cReplyBuffer[1] = '*';
 		return 2;
@@ -365,6 +488,12 @@ BYTE command_set_dout_l(char *pCommand)
 		return 2;
 	}
 
+	if (bChannels_DOUT < 1) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
 	if (channel > (bChannels_DOUT - 1)) {
 		// specified channel number seems to be invalid
 		cReplyBuffer[0] = '!';
@@ -381,37 +510,33 @@ BYTE command_set_dout_l(char *pCommand)
 	return 3;
 }
 
-BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
+BYTE command_set_aout_all(char *pCommand)
 {
-	BYTE value = 0x00;
+	BYTE i = 0;
+	BYTE value = 0;
+	BYTE commandLength = 0;
 
-	if (1 != UART_A_bCmdLength()) {
+	if (bChannels_AOUT < 1) {
 		cReplyBuffer[0] = '!';
 		cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	bContinuousDinRequested = bContinuous;
+	switch (bChannels_AOUT) {
+		case 4:
+			commandLength = 9;
+			break;
 
-	value += GET_DIN_1() ? 0x01 : 0x00;
-	value += GET_DIN_2() ? 0x02 : 0x00;
-	value += GET_DIN_3() ? 0x04 : 0x00;
-	value += GET_DIN_4() ? 0x08 : 0x00;
+		case 8:
+			commandLength = 17;
+			break;
 
-	cReplyBuffer[0] = *pCommand;
-	ByteToHex(value, &cReplyBuffer[1]);	// 'x','x'
-	cReplyBuffer[3] = '*';
-
-	return 4;
-}
-
-BYTE command_set_aout_all(char *pCommand)
-{
-	BYTE i = 0;
-	BYTE value = 0;
+		default:
+			break;
+	}
 
 	// should change 0 or 8 channel condition
-	if (9 != UART_A_bCmdLength()) {
+	if (commandLength != UART_A_bCmdLength()) {
 		cReplyBuffer[0] = '!';
 		cReplyBuffer[1] = '*';
 		return 2;
@@ -465,8 +590,58 @@ BYTE command_set_aout_ch(char *pCommand)
 	return 5;
 }
 
+BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
+{
+	BYTE value = 0x00;
+
+	if (1 != UART_A_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
+	if (bChannels_DIN < 1) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
+	bContinuousDinRequested = bContinuous;
+
+	switch (bChannels_DIN) {
+		case 4:
+			value += GET_DIN_1() ? 0x01 : 0x00;
+			value += GET_DIN_2() ? 0x02 : 0x00;
+			value += GET_DIN_3() ? 0x04 : 0x00;
+			value += GET_DIN_4() ? 0x08 : 0x00;
+			break;
+
+		case 8:
+			value += GET_DIN_5() ? 0x01 : 0x00;
+			value += GET_DIN_6() ? 0x02 : 0x00;
+			value += GET_DIN_7() ? 0x04 : 0x00;
+			value += GET_DIN_8() ? 0x08 : 0x00;	
+			value += GET_DIN_1() ? 0x10 : 0x00;
+			value += GET_DIN_2() ? 0x20 : 0x00;
+			value += GET_DIN_3() ? 0x40 : 0x00;
+			value += GET_DIN_4() ? 0x80 : 0x00;
+		break;
+
+		default:
+			break;
+	}
+
+	cReplyBuffer[0] = *pCommand;
+	ByteToHex(value, &cReplyBuffer[1]);	// 'x','x'
+	cReplyBuffer[3] = '*';
+
+	return 4;
+}
+
 BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 {
+	BYTE i = 0;
+
 	if (1 != UART_A_bCmdLength()) {
 		cReplyBuffer[0] = '!';
 		cReplyBuffer[1] = '*';
@@ -474,16 +649,16 @@ BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 	}
 
 	bContinuousAinRequested = bContinuous;
-	bContinuousAinMask = bContinuousAinRequested ? 0x000F : 0x0000;
+	bContinuousAinMask = bContinuousAinRequested ? 0xFF : 0x00;
 
 	cReplyBuffer[0] = *pCommand;
-	ByteToHex(b_ain[0], &cReplyBuffer[1]);
-	ByteToHex(b_ain[1], &cReplyBuffer[3]);
-	ByteToHex(b_ain[2], &cReplyBuffer[5]);
-	ByteToHex(b_ain[3], &cReplyBuffer[7]);
-	cReplyBuffer[9] = '*';
 
-	return 10;
+	for (i = 0; i < bChannels_AIN; i++) {
+		ByteToHex(b_ain[i], &cReplyBuffer[(i * 2) + 1]);
+	}
+	cReplyBuffer[(bChannels_AIN * 2) + 1] = '*';
+
+	return ((bChannels_AIN * 2) + 2);	// 10 or 18 bytes
 }
 
 BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
@@ -509,9 +684,9 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 	}
 
 	if (bContinuousAinRequested) {
-		bContinuousAinMask = 1 << channel;	// e.g. 0x0010 means 4th channel
+		bContinuousAinMask = 1 << channel;	// e.g. 0x10 means 4th channel
 	} else {
-		bContinuousAinMask = 0x0000;
+		bContinuousAinMask = 0x00;
 	}
 
 	cReplyBuffer[0] = *pCommand;
@@ -530,7 +705,7 @@ BYTE command_stop_cont(void)
 	}
 
 	bContinuousAinRequested = FALSE;
-	bContinuousAinMask = 0x0000;
+	bContinuousAinMask = 0x00;
 	bContinuousDinRequested = FALSE;
 	cReplyBuffer[0] = 'E';
 	cReplyBuffer[1] = '*';
@@ -624,7 +799,7 @@ BYTE command_set_gain(char *pCommand)
 	return 4;
 }
 
-BYTE command_reboot(void)
+BYTE command_reboot_a(void)
 {
 	if (1 != UART_A_bCmdLength()) {
 		cReplyBuffer[0] = '!';
@@ -659,6 +834,22 @@ BOOL set_aout(BYTE channel, BYTE value)
 			PWM8_A_1_WritePulseWidth(value);
 			break;
 
+		case 4:
+			PWM8_A_8_WritePulseWidth(value);
+			break;
+
+		case 5:
+			PWM8_A_7_WritePulseWidth(value);
+			break;
+
+		case 6:
+			PWM8_A_6_WritePulseWidth(value);
+			break;
+
+		case 7:
+			PWM8_A_5_WritePulseWidth(value);
+			break;
+
 		default:
 			break;
 	}
@@ -668,21 +859,29 @@ BOOL set_aout(BYTE channel, BYTE value)
 
 BOOL set_dout(BYTE channel, BOOL value)
 {
-	switch (channel) {
-		case 0:
-			if (value) SET_DOUT_1_H(); else SET_DOUT_1_L();
+	switch (bChannels_DOUT) {
+		case 4:
+			switch (channel) {
+				case 0: if (value) SET_DOUT_1_H(); else SET_DOUT_1_L(); break;
+				case 1: if (value) SET_DOUT_2_H(); else SET_DOUT_2_L(); break;
+				case 2: if (value) SET_DOUT_3_H(); else SET_DOUT_3_L(); break;
+				case 3: if (value) SET_DOUT_4_H(); else SET_DOUT_4_L(); break;
+				default: break;
+			}
 			break;
 
-		case 1:
-			if (value) SET_DOUT_2_H(); else SET_DOUT_2_L();
-			break;
-
-		case 2:
-			if (value) SET_DOUT_3_H(); else SET_DOUT_3_L();
-			break;
-
-		case 3:
-			if (value) SET_DOUT_4_H(); else SET_DOUT_4_L();
+		case 8:
+			switch (channel) {
+				case 0: if (value) SET_DOUT_5_H(); else SET_DOUT_5_L(); break;		
+				case 1: if (value) SET_DOUT_6_H(); else SET_DOUT_6_L(); break;
+				case 2: if (value) SET_DOUT_7_H(); else SET_DOUT_7_L(); break;
+				case 3: if (value) SET_DOUT_8_H(); else SET_DOUT_8_L(); break;
+				case 4: if (value) SET_DOUT_1_H(); else SET_DOUT_1_L(); break;
+				case 5: if (value) SET_DOUT_2_H(); else SET_DOUT_2_L(); break;
+				case 6: if (value) SET_DOUT_3_H(); else SET_DOUT_3_L(); break;
+				case 7: if (value) SET_DOUT_4_H(); else SET_DOUT_4_L(); break;
+				default: break;
+			}
 			break;
 
 		default:
@@ -696,17 +895,31 @@ void send_ain_values(void)
 {
 	BYTE length = 0;
 	BYTE channel = 0;
+	BYTE i = 0;
 
-	if (0x000F == bContinuousAinMask) {
+	if (bChannels_AIN < 1) {
+		return;
+	}
+
+	if (0xFF == bContinuousAinMask) {
 		cReplyBuffer[0] = 'i';
-		ByteToHex(b_ain[0], &cReplyBuffer[1]);
-		ByteToHex(b_ain[1], &cReplyBuffer[3]);
-		ByteToHex(b_ain[2], &cReplyBuffer[5]);
-		ByteToHex(b_ain[3], &cReplyBuffer[7]);
-		cReplyBuffer[9] = '*';
-		length = 10;
+
+		for (i = 0; i < bChannels_AIN; i++) {
+			ByteToHex(b_ain[i], &cReplyBuffer[(i * 2) + 1]);
+		}
+
+		cReplyBuffer[(bChannels_AIN * 2) + 1] = '*';
+		length = bChannels_AIN + 2;	// 10 or 18 bytes
 	} else {
-		if (bContinuousAinMask & 0x08) {
+		if (bContinuousAinMask & 0x80) {
+			channel = 7;
+		} else if (bContinuousAinMask & 0x40) {
+			channel = 6;
+		} else if (bContinuousAinMask & 0x20) {
+			channel = 5;
+		} else if (bContinuousAinMask & 0x10) {
+			channel = 4;
+		} else if (bContinuousAinMask & 0x04) {
 			channel = 3;
 		} else if (bContinuousAinMask & 0x04) {
 			channel = 2;
@@ -728,10 +941,32 @@ void send_din_values(void)
 	BYTE length = 0;
 	BYTE value = 0;
 
-	value += GET_DIN_1() ? 0x01 : 0x00;
-	value += GET_DIN_2() ? 0x02 : 0x00;
-	value += GET_DIN_3() ? 0x04 : 0x00;
-	value += GET_DIN_4() ? 0x08 : 0x00;
+	if (bChannels_DIN < 1) {
+		return;
+	}
+
+	switch (bChannels_DIN) {
+		case 4:
+			value += GET_DIN_1() ? 0x01 : 0x00;
+			value += GET_DIN_2() ? 0x02 : 0x00;
+			value += GET_DIN_3() ? 0x04 : 0x00;
+			value += GET_DIN_4() ? 0x08 : 0x00;
+			break;
+
+		case 8:
+			value += GET_DIN_5() ? 0x01 : 0x00;
+			value += GET_DIN_6() ? 0x02 : 0x00;
+			value += GET_DIN_7() ? 0x04 : 0x00;
+			value += GET_DIN_8() ? 0x08 : 0x00;
+			value += GET_DIN_1() ? 0x10 : 0x00;
+			value += GET_DIN_2() ? 0x20 : 0x00;
+			value += GET_DIN_3() ? 0x40 : 0x00;
+			value += GET_DIN_4() ? 0x80 : 0x00;
+			break;
+
+		default:
+			break;
+	}
 
 	cReplyBuffer[0] = 'r';
 	ByteToHex(value, &cReplyBuffer[1]);	// 'x', 'x'
