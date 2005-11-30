@@ -404,9 +404,9 @@ void handle_commands_config_a(void)
 
 BYTE command_set_dout_all(char *pCommand)
 {
-	BYTE value = 0;
+	WORD value = 0;
 
-	if (3 != UART_A_bCmdLength()) {
+	if (5 != UART_A_bCmdLength()) {
 		cReplyBuffer[0] = '!';
 		cReplyBuffer[1] = '*';
 		return 2;
@@ -414,24 +414,26 @@ BYTE command_set_dout_all(char *pCommand)
 
 	value = HEX_TO_BYTE(*(pCommand + 1));
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 2));
+	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 3));
+	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 4));
 
 	switch (bChannels_DOUT) {
 		case 4:
-			set_dout(3, (value & 0x08));
-			set_dout(2, (value & 0x04));
-			set_dout(1, (value & 0x02));
-			set_dout(0, (value & 0x01));
+			set_dout(3, (value & 0x0008));
+			set_dout(2, (value & 0x0004));
+			set_dout(1, (value & 0x0002));
+			set_dout(0, (value & 0x0001));
 			break;
 
 		case 8:
-			set_dout(7, (value & 0x80));
-			set_dout(6, (value & 0x40));
-			set_dout(5, (value & 0x20));
-			set_dout(4, (value & 0x10));
-			set_dout(3, (value & 0x08));
-			set_dout(2, (value & 0x04));
-			set_dout(1, (value & 0x02));
-			set_dout(0, (value & 0x01));
+			set_dout(7, (value & 0x0080));
+			set_dout(6, (value & 0x0040));
+			set_dout(5, (value & 0x0020));
+			set_dout(4, (value & 0x0010));
+			set_dout(3, (value & 0x0008));
+			set_dout(2, (value & 0x0004));
+			set_dout(1, (value & 0x0002));
+			set_dout(0, (value & 0x0001));
 			break;
 
 		default:
@@ -441,9 +443,11 @@ BYTE command_set_dout_all(char *pCommand)
 	cReplyBuffer[0] = 'D';
 	cReplyBuffer[1] = *(pCommand + 1);
 	cReplyBuffer[2] = *(pCommand + 2);
-	cReplyBuffer[3] = '*';
+	cReplyBuffer[3] = *(pCommand + 3);
+	cReplyBuffer[4] = *(pCommand + 4);
+	cReplyBuffer[5] = '*';
 
-	return 4;
+	return 6;
 }
 
 BYTE command_set_dout_h(char *pCommand)
@@ -632,10 +636,11 @@ BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
 	}
 
 	cReplyBuffer[0] = *pCommand;
-	ByteToHex(value, &cReplyBuffer[1]);	// 'x','x'
-	cReplyBuffer[3] = '*';
+	ByteToHex(0x00, &cReplyBuffer[1]);	// 'x','x'
+	ByteToHex(value, &cReplyBuffer[3]);	// 'x','x'
+	cReplyBuffer[5] = '*';
 
-	return 4;
+	return 6;
 }
 
 BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
@@ -969,9 +974,10 @@ void send_din_values(void)
 	}
 
 	cReplyBuffer[0] = 'r';
-	ByteToHex(value, &cReplyBuffer[1]);	// 'x', 'x'
-	cReplyBuffer[3] = '*';
-	length = 4;
+	ByteToHex(0x00, &cReplyBuffer[1]);	// 'x', 'x'
+	ByteToHex(value, &cReplyBuffer[3]);	// 'x', 'x'
+	cReplyBuffer[5] = '*';
+	length = 6;
 
 	UART_A_Write(cReplyBuffer, length);
 }
