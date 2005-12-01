@@ -12,7 +12,7 @@
  */
 #define GET_BUTTON() (PRT1DR&0x20)				// P1[5]
 
-// NOTE: P1[5]  is pull-downed, so should be always ZERO!!!
+// NOTE: P1[5] is pull-downed, so should be always ZERO!!!
 #define SET_LED_H() (PRT1DR=(PRT1DR&0xDF)|0x80)	// P1[7]
 #define SET_LED_L() (PRT1DR&=0x5F)				// P1[7]
 
@@ -20,27 +20,16 @@
  * global definitions
  */
 enum {
-#if 0
-						//     ain :din :aout:dout
-						//     ----:----:----:----
-	CONFIG_START = 0,	// C0:    0:   0:   0:   0
-	CONFIG_1,			// C1:    4:   4:   4:   4
-	CONFIG_2,			// C2:    8:   0:   4:   4
-	CONFIG_3,			// C3:    0:   8:   4:   4
-	CONFIG_4,			// C4:    4:   4:   8:   0
-	CONFIG_5,			// C5:    4:   4:   0:   8
-	CONFIG_6,			// C6:    0:  16:   0:   0	(not implemented in v1.00 alpha/4)
-	CONFIG_7			// C7:    0:   0:   0:  16	(not implemented in v1.00 alpha/4)
-#else
 						//     ain :din :aout:dout
 						//     ----:----:----:----
 	CONFIG_START = 0,	// C0:    0:   0:   0:   0
 	CONFIG_1,			// C1:    4:   4:   4:   4
 	CONFIG_2,			// C2:    8:   0:   4:   4
 	CONFIG_3,			// C3:    4:   4:   8:   0
-	CONFIG_4,			// C4:    0:  16:   0:   0	(not implemented in v1.00 alpha/4)
-	CONFIG_5			// C5:    0:   0:   0:  16	(not implemented in v1.00 alpha/4)
-#endif
+	CONFIG_4,			// C4:    0:  16:   0:   0
+	CONFIG_5,			// C5:    0:   0:   0:  16
+	CONFIG_6,			// C6: LED matrix control mode???
+	CONFIG_7			// C7: CapSense mode???
 };
 
 /**
