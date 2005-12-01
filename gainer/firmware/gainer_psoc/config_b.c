@@ -72,6 +72,8 @@ BYTE config_b_command_reboot(void);
 BOOL config_b_set_dout(BYTE channel, WORD value);
 void config_b_send_din_values(BOOL bContinuous);
 
+void config_b_init_output_ports(void);
+
 /**
  * interrupt handler
  */
@@ -154,10 +156,14 @@ void Enter_Config_B(void)
 	PRT2DM2 &= ~0x40;
 	PRT2DM1 &= ~0x40;
 	PRT2DM0 |= 0x40;
+
+	config_b_init_output_ports();
 }
 
 void Exit_Config_B(void)
 {
+	config_b_init_output_ports();
+
 	M8C_DisableGInt;
 	UART_B_Stop();
 	Counter8_B_Din_Stop();
@@ -266,6 +272,7 @@ BYTE config_b_command_get_din_all(char *pCommand, BOOL bContinuous)
 
 BYTE config_b_command_set_dout_all(char *pCommand)
 {
+	BYTE i = 0;
 	WORD value = 0;
 
 	if (5 != UART_B_bCmdLength()) {
@@ -285,23 +292,10 @@ BYTE config_b_command_set_dout_all(char *pCommand)
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 3));
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 4));
 
-	config_b_set_dout(15, (value & 0x8000));
-	config_b_set_dout(14, (value & 0x4000));
-	config_b_set_dout(13, (value & 0x2000));
-	config_b_set_dout(12, (value & 0x1000));
-	config_b_set_dout(11, (value & 0x0800));
-	config_b_set_dout(10, (value & 0x0400));
-	config_b_set_dout(9, (value & 0x0200));
-	config_b_set_dout(8, (value & 0x0100));
-
-	config_b_set_dout(7, (value & 0x0080));
-	config_b_set_dout(6, (value & 0x0040));
-	config_b_set_dout(5, (value & 0x0020));
-	config_b_set_dout(4, (value & 0x0010));
-	config_b_set_dout(3, (value & 0x0008));
-	config_b_set_dout(2, (value & 0x0004));
-	config_b_set_dout(1, (value & 0x0002));
-	config_b_set_dout(0, (value & 0x0001));
+	// set all output ports
+	for (i = 0; i < bChannels_DOUT; i++) {
+		config_b_set_dout(i, (value & (1 << i)));
+	}
 
 	cReplyBuffer[0] = 'D';
 	cReplyBuffer[1] = *(pCommand + 1);
@@ -480,4 +474,14 @@ void config_b_send_din_values(BOOL bContinuous)
 	length = 6;
 
 	UART_B_Write(cReplyBuffer, length);
+}
+
+void config_b_init_output_ports(void)
+{
+	BYTE i = 0;
+
+	// initialize digital outputs
+	for (i = 0; i < bChannels_DOUT; i++) {
+		config_b_set_dout(i, FALSE);
+	}
 }

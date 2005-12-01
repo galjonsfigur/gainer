@@ -58,9 +58,11 @@ BYTE command_set_gain(char *pCommand);
 BYTE command_reboot_a(void);
 
 BOOL set_aout(BYTE channel, BYTE value);
-BOOL set_dout(BYTE channel, BOOL value);
+BOOL set_dout(BYTE channel, WORD value);
 void send_ain_values(void);
 void send_din_values(void);
+
+void init_output_ports(void);
 
 /**
  * private variables of CONFIG_A
@@ -161,13 +163,11 @@ void Enter_Config_A(void)
 	// start analog inputs
 	AMUX4_A_1_Start();
 	AMUX4_A_2_Start();
-//	AMUX4_A_2_InputSelect(bAdcChannelNumber);
 	PGA_A_1_SetGain(bGainTable[0]);
 	PGA_A_2_SetGain(bGainTable[0]);
 	PGA_A_1_Start(PGA_A_1_LOWPOWER);		// see the module datasheet
 	PGA_A_2_Start(PGA_A_2_LOWPOWER);		// might be good lpf!?
 	DUALADC_A_Start(DUALADC_A_HIGHPOWER);	// try lower power later
-//	DUALADC_A_GetSamples(0);	// continuous sampling
 
 #if 0
 	// start analog outputs
@@ -236,11 +236,15 @@ void Enter_Config_A(void)
 			break;
 	}
 
+	init_output_ports();
+
 	M8C_EnableGInt;
 }
 
 void Exit_Config_A(void)
 {
+	init_output_ports();
+
 	M8C_DisableGInt;
 
 	// stop UART
@@ -434,6 +438,7 @@ void handle_commands_config_a(void)
 
 BYTE command_set_dout_all(char *pCommand)
 {
+	BYTE i = 0;
 	WORD value = 0;
 
 	if (5 != UART_A_bCmdLength()) {
@@ -447,27 +452,9 @@ BYTE command_set_dout_all(char *pCommand)
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 3));
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 4));
 
-	switch (bChannels_DOUT) {
-		case 4:
-			set_dout(3, (value & 0x0008));
-			set_dout(2, (value & 0x0004));
-			set_dout(1, (value & 0x0002));
-			set_dout(0, (value & 0x0001));
-			break;
-
-		case 8:
-			set_dout(7, (value & 0x0080));
-			set_dout(6, (value & 0x0040));
-			set_dout(5, (value & 0x0020));
-			set_dout(4, (value & 0x0010));
-			set_dout(3, (value & 0x0008));
-			set_dout(2, (value & 0x0004));
-			set_dout(1, (value & 0x0002));
-			set_dout(0, (value & 0x0001));
-			break;
-
-		default:
-			break;
+	// set all output ports
+	for (i = 0; i < bChannels_DOUT; i++) {
+		set_dout(i, (value & (1 << i)));
 	}
 
 	cReplyBuffer[0] = 'D';
@@ -892,7 +879,7 @@ BOOL set_aout(BYTE channel, BYTE value)
 	return TRUE;
 }
 
-BOOL set_dout(BYTE channel, BOOL value)
+BOOL set_dout(BYTE channel, WORD value)
 {
 	switch (bChannels_DOUT) {
 		case 4:
@@ -1010,4 +997,19 @@ void send_din_values(void)
 	length = 6;
 
 	UART_A_Write(cReplyBuffer, length);
+}
+
+void init_output_ports(void)
+{
+	BYTE i = 0;
+
+	// initialize analog outputs
+	for (i = 0; i < bChannels_AOUT; i++) {
+		set_aout(i, 0);
+	}
+
+	// initialize digital outputs
+	for (i = 0; i < bChannels_DOUT; i++) {
+		set_dout(i, FALSE);
+	}
 }
