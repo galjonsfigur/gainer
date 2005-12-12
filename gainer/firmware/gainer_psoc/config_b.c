@@ -97,7 +97,7 @@ void Enter_Config_B(void)
 	bContinuousDinRequested = FALSE;
 
 	switch (bCurrentConfig) {
-		case CONFIG_4:
+		case CONFIG_5:
 			// consigure number of each port type
 			bChannels_AIN = 0;
 			bChannels_DIN = 16;
@@ -118,7 +118,7 @@ void Enter_Config_B(void)
 			PRT2DM0 &= ~0xAB;	// P2[0], P2[1], P2[3], P2[5] and P2[7]
 			break;
 
-		case CONFIG_5:
+		case CONFIG_6:
 			// consigure number of each port type
 			bChannels_AIN = 0;
 			bChannels_DIN = 0;
@@ -297,6 +297,10 @@ BYTE config_b_command_set_dout_all(char *pCommand)
 		config_b_set_dout(i, (value & (1 << i)));
 	}
 
+	if (!bVerboseMode) {
+		return 0;
+	}
+
 	cReplyBuffer[0] = 'D';
 	cReplyBuffer[1] = *(pCommand + 1);
 	cReplyBuffer[2] = *(pCommand + 2);
@@ -332,6 +336,10 @@ BYTE config_b_command_set_dout_ch_h(char *pCommand)
 
 	config_b_set_dout(channel, TRUE);
 
+	if (!bVerboseMode) {
+		return 0;
+	}
+
 	cReplyBuffer[0] = 'H';
 	cReplyBuffer[1] = *(pCommand + 1);
 	cReplyBuffer[2] = '*';
@@ -363,6 +371,10 @@ BYTE config_b_command_set_dout_ch_l(char *pCommand)
 	}
 
 	config_b_set_dout(channel, FALSE);
+
+	if (!bVerboseMode) {
+		return 0;
+	}
 
 	cReplyBuffer[0] = 'L';
 	cReplyBuffer[1] = *(pCommand + 1);
