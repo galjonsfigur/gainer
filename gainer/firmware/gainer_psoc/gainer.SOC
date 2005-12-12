@@ -23,13 +23,672 @@
 				<SOURCE_FILE NAME="config_a.c" TYPE="UserSourceModule" LANGUAGE="C" OVERLAY_NAME=""/>
 				<SOURCE_FILE NAME="config_b.c" TYPE="UserSourceModule" LANGUAGE="C" OVERLAY_NAME=""/>
 				<SOURCE_FILE NAME="gainer_common.h" TYPE="UserIncludeFile" LANGUAGE="C" OVERLAY_NAME=""/>
-				<SOURCE_FILE NAME="amux4_a_1.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="1239040" LIBTIME="15270536"/>
-				<SOURCE_FILE NAME="amux4_a_1.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="15270536"/>
-				<SOURCE_FILE NAME="amux4_a_1.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="15270536"/>
-				<SOURCE_FILE NAME="amux4_a_2.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="1239040" LIBTIME="15270536"/>
-				<SOURCE_FILE NAME="amux4_a_2.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="15270536"/>
-				<SOURCE_FILE NAME="amux4_a_2.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="15270536"/>
-				<SOURCE_FILE NAME="counter16_a_pwmclkint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="1239040" LIBTIME="15270528"/>
+				<SOURCE_FILE NAME="config_c.c" TYPE="UserSourceModule" LANGUAGE="C" OVERLAY_NAME=""/>
+				<SOURCE_FILE NAME="config_d.c" TYPE="UserSourceModule" LANGUAGE="C" OVERLAY_NAME=""/>
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				<SOURCE_FILE NAME="amux4_a_1.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="1239040" LIBTIME="7389798"/>
+				<SOURCE_FILE NAME="amux4_a_1.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="amux4_a_1.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="amux4_a_2.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="1239040" LIBTIME="7389798"/>
+				<SOURCE_FILE NAME="amux4_a_2.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="amux4_a_2.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="counter16_a_pwmclkint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="1239040" LIBTIME="7389798"/>
 				<SOURCE_FILE NAME="counter16_a_pwmclk.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="counter16_a_pwmclk.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="counter16_a_pwmclk.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_a" FILEMODTIME="2090141040" LIBTIME="-1"/>
@@ -89,21 +748,49 @@
 				<SOURCE_FILE NAME="uart_b.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_b" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uart_bint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_b" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uart_b.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_b" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="uart_c.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_c" FILEMODTIME="1239040" LIBTIME="7389798"/>
+				<SOURCE_FILE NAME="uart_cplus.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_c" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="uart_c.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_c" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="uart_cint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_c" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="uart_c.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_c" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="amux8_d.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="1239040" LIBTIME="7389798"/>
+				<SOURCE_FILE NAME="amux8_d.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="amux8_d.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="cmpprg_d.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="1239040" LIBTIME="7389798"/>
+				<SOURCE_FILE NAME="cmpprg_d.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="cmpprg_d.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="digbuf_dint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="1239040" LIBTIME="7389798"/>
+				<SOURCE_FILE NAME="digbuf_d.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="digbuf_d.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="digbuf_d.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="timer16_dint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="1239040" LIBTIME="7389798"/>
+				<SOURCE_FILE NAME="timer16_d.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="timer16_d.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="timer16_d.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="timer8_dint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="1239040" LIBTIME="7389798"/>
+				<SOURCE_FILE NAME="timer8_d.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="timer8_d.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="timer8_d.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="uart_d.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="1239040" LIBTIME="7389798"/>
+				<SOURCE_FILE NAME="uart_dplus.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="uart_d.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="uart_dint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="uart_d.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uart.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="1239040" LIBTIME="7389798"/>
 				<SOURCE_FILE NAME="uartplus.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uart.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uartint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uart.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="psocconfigtbl.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266608" LIBTIME="1242188"/>
-				<SOURCE_FILE NAME="psocdynamic.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="47426712" LIBTIME="1242700"/>
+				<SOURCE_FILE NAME="psocconfigtbl.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266688" LIBTIME="1242188"/>
+				<SOURCE_FILE NAME="psocdynamic.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="61949712" LIBTIME="1242700"/>
 				<SOURCE_FILE NAME="psocdynamic.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="0" LIBTIME="1242700"/>
 				<SOURCE_FILE NAME="psocdynamicint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="0" LIBTIME="1242700"/>
-				<SOURCE_FILE NAME="psocgpioint.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266608" LIBTIME="1242700"/>
-				<SOURCE_FILE NAME="psocgpioint.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266608" LIBTIME="1242700"/>
-				<SOURCE_FILE NAME="psocconfig.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266608" LIBTIME="1242700"/>
+				<SOURCE_FILE NAME="psocgpioint.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266688" LIBTIME="1242700"/>
+				<SOURCE_FILE NAME="psocgpioint.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266688" LIBTIME="1242700"/>
+				<SOURCE_FILE NAME="psocconfig.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266688" LIBTIME="1242700"/>
 				<SOURCE_FILE NAME="boot.asm" TYPE="UserSourceModule" LANGUAGE="ASM" OVERLAY_NAME=""/>
-				<SOURCE_FILE NAME="globalparams.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266634" LIBTIME="1242700"/>
-				<SOURCE_FILE NAME="globalparams.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266634" LIBTIME="1242700"/>
+				<SOURCE_FILE NAME="globalparams.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266890" LIBTIME="1242700"/>
+				<SOURCE_FILE NAME="globalparams.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17266890" LIBTIME="1242700"/>
 			</SOURCE_FILE_LIST>
 			<LIB_FILE_LIST>
 				<LIB_FILE NAME="libPSoC.a" TYPE="UserLibrary">

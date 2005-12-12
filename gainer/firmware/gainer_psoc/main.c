@@ -52,6 +52,14 @@ void main()
 				Main_Config_B();
 				break;
 
+			case CONFIG_7:
+				Main_Config_C();
+				break;
+
+			case CONFIG_8:
+				Main_Config_D();
+				break;
+
 			default:
 				break;
 		}
@@ -74,6 +82,14 @@ void main()
 				case CONFIG_5:
 				case CONFIG_6:
 					Exit_Config_B();
+					break;
+
+				case CONFIG_7:
+					Exit_Config_C();
+					break;
+
+				case CONFIG_8:
+					Exit_Config_D();
 					break;
 
 				default:
@@ -153,6 +169,14 @@ void Main_Config_Start()
 			Exit_Config_B();
 			break;
 
+		case CONFIG_7:
+			Exit_Config_C();
+			break;
+
+		case CONFIG_8:
+			Exit_Config_D();
+			break;
+
 		default:
 			break;
 	}
@@ -172,6 +196,14 @@ void Main_Config_Start()
 		case CONFIG_5:
 		case CONFIG_6:
 			Enter_Config_B();
+			break;
+
+		case CONFIG_7:
+			Enter_Config_C();
+			break;
+
+		case CONFIG_8:
+			Enter_Config_D();
 			break;
 
 		default:
@@ -274,6 +306,14 @@ BYTE handle_config_command(char *pCommand)
 
 		case '6':	// i.e. 'KONFIGURATION_6'
 			_gainer.bRequestedConfig = CONFIG_6;
+			break;
+
+		case '7':	// i.e. 'KONFIGURATION_7'
+			_gainer.bRequestedConfig = CONFIG_7;
+			break;
+
+		case '8':	// i.e. 'KONFIGURATION_8'
+			_gainer.bRequestedConfig = CONFIG_8;
 			break;
 
 		default:

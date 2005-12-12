@@ -31,7 +31,7 @@ enum {
 	CONFIG_6,			// C6:    0:   0:   0:  16
 	CONFIG_7,			// C7: LED matrix control mode???
 	CONFIG_8,			// C8: CapSense mode???
-	CONFIG_9			// C9: R/C servo control???
+//	CONFIG_9			// C9: R/C servo control???
 };
 
 /**
@@ -57,6 +57,22 @@ void Main_Config_A(void);
 void Enter_Config_B(void);
 void Exit_Config_B(void);
 void Main_Config_B(void);
+
+/**
+ * public functions of CONFIG_C
+ * implemented in config_c.c
+ */
+void Enter_Config_C(void);
+void Exit_Config_C(void);
+void Main_Config_C(void);
+
+/**
+ * public functions of CONFIG_D
+ * implemented in config_d.c
+ */
+void Enter_Config_D(void);
+void Exit_Config_D(void);
+void Main_Config_D(void);
 
 typedef struct {
 	BOOL bContinuousAinRequested;
