@@ -6,49 +6,13 @@
 #include "PSoCAPI.h"    // PSoC API definitions for all User Modules
 #include "gainer_common.h"
 
-BOOL bContinuousAinRequested = FALSE;
-BYTE bContinuousAinMask = 0x0000;
-BOOL bContinuousDinRequested = FALSE;
-BOOL bQuitRequested = FALSE;
-BYTE bCurrentConfig = CONFIG_START;
-BYTE bRequestedConfig = CONFIG_START;
-
-char cReplyBuffer[32];
-
-const BYTE bGainTable[16] = {
-	PGA_A_1_G1_00,	// G0x
-	PGA_A_1_G1_14,	// G1x
-	PGA_A_1_G1_33,	// G2x
-	PGA_A_1_G1_46,	// G3x
-	PGA_A_1_G1_60,	// G4x
-	PGA_A_1_G1_78,	// G5x
-	PGA_A_1_G2_00,	// G6x
-	PGA_A_1_G2_27,	// G7x
-	PGA_A_1_G2_67,	// G8x
-	PGA_A_1_G3_20,	// G9x
-	PGA_A_1_G4_00,	// GAx
-	PGA_A_1_G5_33,	// GBx
-	PGA_A_1_G8_00,	// GCx
-	PGA_A_1_G16_0,	// GDx
-	PGA_A_1_G24_0,	// GEx
-	PGA_A_1_G48_0,	// GFx
-};
-
-const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
-
-WORD wAdcValue[16];
-BYTE bAdcChannelNumber;
-BYTE bAdcFlags;
-BOOL bVerboseMode = TRUE;
-
-BYTE bChannels_AIN = 0;
-BYTE bChannels_AOUT = 0;
-BYTE bChannels_DIN = 0;
-BYTE bChannels_DOUT = 0;
+global_parameters _gainer;
 
 /**
  * private functions of CONFIG_START
  */
+const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
+
 void handle_commands_config_start(void);
 BYTE handle_config_command(char *pCommand);
 BYTE command_reboot(void);
@@ -56,10 +20,22 @@ BYTE command_verbose(char *pCommand);
 
 void main()
 {
+	_gainer.bContinuousAinRequested = FALSE;
+	_gainer.bContinuousAinMask = 0x0000;
+	_gainer.bContinuousDinRequested = FALSE;
+	_gainer.bQuitRequested = FALSE;
+	_gainer.bCurrentConfig = CONFIG_START;
+	_gainer.bRequestedConfig = CONFIG_START;
+	_gainer.bVerboseMode = TRUE;
+	_gainer.bChannels_AIN = 0;
+	_gainer.bChannels_AOUT = 0;
+	_gainer.bChannels_DIN = 0;
+	_gainer.bChannels_DOUT = 0;
+
 	Enter_Config_Start();	// enter CONFIG_START
 
 	while (TRUE) {
-		switch (bCurrentConfig) {
+		switch (_gainer.bCurrentConfig) {
 			case CONFIG_START:
 				Main_Config_Start();
 				break;
@@ -80,10 +56,10 @@ void main()
 				break;
 		}
 
-		if (bQuitRequested) {
+		if (_gainer.bQuitRequested) {
 			WaitForBriefSpells();
 
-			switch (bCurrentConfig) {
+			switch (_gainer.bCurrentConfig) {
 				case CONFIG_START:
 					Exit_Config_Start();
 					break;
@@ -111,7 +87,7 @@ void main()
 
 void Enter_Config_Start()
 {
-	bCurrentConfig = CONFIG_START;
+	_gainer.bCurrentConfig = CONFIG_START;
 
 	LoadConfig_gainer();
 
@@ -156,11 +132,11 @@ void Main_Config_Start()
 {
 	handle_commands_config_start();
 
-	if (bCurrentConfig == bRequestedConfig) {
+	if (_gainer.bCurrentConfig == _gainer.bRequestedConfig) {
 		return;	// have nothing to do :)
 	}
 
-	switch (bCurrentConfig) {
+	switch (_gainer.bCurrentConfig) {
 		case CONFIG_START:
 			Exit_Config_Start();
 			break;
@@ -181,7 +157,7 @@ void Main_Config_Start()
 			break;
 	}
 
-	switch (bRequestedConfig) {
+	switch (_gainer.bRequestedConfig) {
 		case CONFIG_START:
 			Enter_Config_Start();
 			break;
@@ -211,24 +187,24 @@ void handle_commands_config_start()
 		if(pCommand = UART_szGetParam()) {
 			switch (*pCommand) {
 				case 'K':	// configuration (KONFIGURATION_n)
-					UART_Write(cReplyBuffer, handle_config_command(pCommand));
+					UART_Write(_gainer.cReplyBuffer, handle_config_command(pCommand));
 					WaitForBriefSpells();
 					break;
 				
 				case 'Q':	// reboot (Q)
-					UART_Write(cReplyBuffer, command_reboot());
+					UART_Write(_gainer.cReplyBuffer, command_reboot());
 					WaitForBriefSpells();
 					break;
 				
 				case 'V':	// verbose (V)
-					UART_Write(cReplyBuffer, command_verbose(pCommand));
+					UART_Write(_gainer.cReplyBuffer, command_verbose(pCommand));
 					break;
 				
 				default:
 					// seems to be an invalid command
-					cReplyBuffer[0] = '!';
-					cReplyBuffer[1] = '*';
-					UART_Write(cReplyBuffer, 2);
+					_gainer.cReplyBuffer[0] = '!';
+					_gainer.cReplyBuffer[1] = '*';
+					UART_Write(_gainer.cReplyBuffer, 2);
 					break;
 			}
 		}
@@ -262,42 +238,42 @@ BYTE handle_config_command(char *pCommand)
 	}
 
 	for (i = 0; i < sizeof(cConfigCommandPrefix); i++) {
-		cReplyBuffer[i] = cConfigCommandPrefix[i];
+		_gainer.cReplyBuffer[i] = cConfigCommandPrefix[i];
 	}
 
-	cReplyBuffer[i] = (*p);
+	_gainer.cReplyBuffer[i] = (*p);
 	i++;
-	cReplyBuffer[i] = '*';
+	_gainer.cReplyBuffer[i] = '*';
 
 	bNumBytes = sizeof(cConfigCommandPrefix) + 2;
 
 	switch (*p) {
 		case '0':	// i.e. 'KONFIGURATION_0'
-			bRequestedConfig = CONFIG_START;
+			_gainer.bRequestedConfig = CONFIG_START;
 			break;
 
 		case '1':	// i.e. 'KONFIGURATION_1'
-			bRequestedConfig = CONFIG_1;
+			_gainer.bRequestedConfig = CONFIG_1;
 			break;
 
 		case '2':	// i.e. 'KONFIGURATION_2'
-			bRequestedConfig = CONFIG_2;
+			_gainer.bRequestedConfig = CONFIG_2;
 			break;
 
 		case '3':	// i.e. 'KONFIGURATION_3'
-			bRequestedConfig = CONFIG_3;
+			_gainer.bRequestedConfig = CONFIG_3;
 			break;
 
 		case '4':	// i.e. 'KONFIGURATION_4'
-			bRequestedConfig = CONFIG_4;
+			_gainer.bRequestedConfig = CONFIG_4;
 			break;
 
 		case '5':	// i.e. 'KONFIGURATION_5'
-			bRequestedConfig = CONFIG_5;
+			_gainer.bRequestedConfig = CONFIG_5;
 			break;
 
 		case '6':	// i.e. 'KONFIGURATION_6'
-			bRequestedConfig = CONFIG_6;
+			_gainer.bRequestedConfig = CONFIG_6;
 			break;
 
 		default:
@@ -314,15 +290,15 @@ BYTE handle_config_command(char *pCommand)
 BYTE command_reboot(void)
 {
 	if (1 != UART_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	bQuitRequested = TRUE;
+	_gainer.bQuitRequested = TRUE;
 
-	cReplyBuffer[0] = 'Q';
-	cReplyBuffer[1] = '*';
+	_gainer.cReplyBuffer[0] = 'Q';
+	_gainer.cReplyBuffer[1] = '*';
 
 	return 2;
 }
@@ -332,8 +308,8 @@ BYTE command_verbose(char *pCommand)
 	char * p = pCommand;
 
 	if (2 != UART_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
@@ -341,16 +317,16 @@ BYTE command_verbose(char *pCommand)
 	
 	switch (*p) {
 		case '0':
-			bVerboseMode = FALSE;
+			_gainer.bVerboseMode = FALSE;
 			break;
 
 		default:
 			break;
 	}
 
-	cReplyBuffer[0] = 'V';
-	cReplyBuffer[1] = *p;
-	cReplyBuffer[2] = '*';
+	_gainer.cReplyBuffer[0] = 'V';
+	_gainer.cReplyBuffer[1] = *p;
+	_gainer.cReplyBuffer[2] = '*';
 
 	return 3;
 }
@@ -383,6 +359,6 @@ void WaitForBriefSpells(void)
 
 void PutErrorStringToReplyBuffer(void)
 {
-	cReplyBuffer[0] = '!';
-	cReplyBuffer[1] = '*';
+	_gainer.cReplyBuffer[0] = '!';
+	_gainer.cReplyBuffer[1] = '*';
 }

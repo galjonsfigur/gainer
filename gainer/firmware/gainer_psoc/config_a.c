@@ -1,39 +1,33 @@
 #include "gainer_common.h"
 
-#define GET_DIN_1() (PRT0DR&0x40)	// P0[6]
-#define GET_DIN_2() (PRT0DR&0x10)	// P0[4]
-#define GET_DIN_3() (PRT0DR&0x04)	// P0[2]
-#define GET_DIN_4() (PRT0DR&0x01)	// P0[0]
-#define GET_DIN_5() (PRT0DR&0x80)	// P0[7]
-#define GET_DIN_6() (PRT0DR&0x20)	// P0[5]
-#define GET_DIN_7() (PRT0DR&0x08)	// P0[3]
-#define GET_DIN_8() (PRT0DR&0x02)	// P0[1]
+#define A_GET_DIN_1() (PRT0DR&0x40)	// P0[6]
+#define A_GET_DIN_2() (PRT0DR&0x10)	// P0[4]
+#define A_GET_DIN_3() (PRT0DR&0x04)	// P0[2]
+#define A_GET_DIN_4() (PRT0DR&0x01)	// P0[0]
+#define A_GET_DIN_5() (PRT0DR&0x80)	// P0[7]
+#define A_GET_DIN_6() (PRT0DR&0x20)	// P0[5]
+#define A_GET_DIN_7() (PRT0DR&0x08)	// P0[3]
+#define A_GET_DIN_8() (PRT0DR&0x02)	// P0[1]
 
 // NOTE: P1[5] is pull-downed, so should be always ZERO!!!
-#define SET_DOUT_1_H() (PRT2DR|=0x01)				// P2[0]
-#define SET_DOUT_2_H() (PRT1DR=(PRT1DR&0xDF)|0x40)	// P1[6]
-#define SET_DOUT_3_H() (PRT1DR=(PRT1DR&0xDF)|0x10)	// P1[4]
-#define SET_DOUT_4_H() (PRT1DR=(PRT1DR&0xDF)|0x04)	// P1[2]
-#define SET_DOUT_5_H() (PRT2DR|=0x80)				// P2[7]
-#define SET_DOUT_6_H() (PRT2DR|=0x20)				// P2[5]
-#define SET_DOUT_7_H() (PRT2DR|=0x08)				// P2[3]
-#define SET_DOUT_8_H() (PRT2DR|=0x02)				// P2[1]
-///
+#define A_SET_DOUT_1_H() (PRT2DR|=0x01)				// P2[0]
+#define A_SET_DOUT_2_H() (PRT1DR=(PRT1DR&0xDF)|0x40)	// P1[6]
+#define A_SET_DOUT_3_H() (PRT1DR=(PRT1DR&0xDF)|0x10)	// P1[4]
+#define A_SET_DOUT_4_H() (PRT1DR=(PRT1DR&0xDF)|0x04)	// P1[2]
+#define A_SET_DOUT_5_H() (PRT2DR|=0x80)				// P2[7]
+#define A_SET_DOUT_6_H() (PRT2DR|=0x20)				// P2[5]
+#define A_SET_DOUT_7_H() (PRT2DR|=0x08)				// P2[3]
+#define A_SET_DOUT_8_H() (PRT2DR|=0x02)				// P2[1]
 
 // NOTE: P1[5]  is pull-downed, so should be always ZERO!!!
-#define SET_DOUT_1_L() (PRT2DR&=0xFE)	// P2[0]
-#define SET_DOUT_2_L() (PRT1DR&=0x9F)	// P1[6]
-#define SET_DOUT_3_L() (PRT1DR&=0xCF)	// P1[4]
-#define SET_DOUT_4_L() (PRT1DR&=0xDB)	// P1[2]
-#define SET_DOUT_5_L() (PRT2DR&=0x7F)	// P2[7]
-#define SET_DOUT_6_L() (PRT2DR&=0xDF)	// P2[5]
-#define SET_DOUT_7_L() (PRT2DR&=0xF7)	// P2[3]
-#define SET_DOUT_8_L() (PRT2DR&=0xFD)	// P2[1]
-
-extern BOOL bContinuousAinRequested;
-extern BOOL bContinuousDinRequested;
-extern BYTE bCurrentConfig;
-extern BYTE bRequestedConfig;
+#define A_SET_DOUT_1_L() (PRT2DR&=0xFE)	// P2[0]
+#define A_SET_DOUT_2_L() (PRT1DR&=0x9F)	// P1[6]
+#define A_SET_DOUT_3_L() (PRT1DR&=0xCF)	// P1[4]
+#define A_SET_DOUT_4_L() (PRT1DR&=0xDB)	// P1[2]
+#define A_SET_DOUT_5_L() (PRT2DR&=0x7F)	// P2[7]
+#define A_SET_DOUT_6_L() (PRT2DR&=0xDF)	// P2[5]
+#define A_SET_DOUT_7_L() (PRT2DR&=0xF7)	// P2[3]
+#define A_SET_DOUT_8_L() (PRT2DR&=0xFD)	// P2[1]
 
 /**
  * private functions of CONFIG_A
@@ -67,31 +61,59 @@ void init_output_ports(void);
 /**
  * private variables of CONFIG_A
  */
-BYTE b_ain[8];
-BOOL bButtonWasOn = FALSE;
-BOOL bButtonIsOn = FALSE;
+const BYTE bGainTable[16] = {
+	PGA_A_1_G1_00,	// G0x
+	PGA_A_1_G1_14,	// G1x
+	PGA_A_1_G1_33,	// G2x
+	PGA_A_1_G1_46,	// G3x
+	PGA_A_1_G1_60,	// G4x
+	PGA_A_1_G1_78,	// G5x
+	PGA_A_1_G2_00,	// G6x
+	PGA_A_1_G2_27,	// G7x
+	PGA_A_1_G2_67,	// G8x
+	PGA_A_1_G3_20,	// G9x
+	PGA_A_1_G4_00,	// GAx
+	PGA_A_1_G5_33,	// GBx
+	PGA_A_1_G8_00,	// GCx
+	PGA_A_1_G16_0,	// GDx
+	PGA_A_1_G24_0,	// GEx
+	PGA_A_1_G48_0,	// GFx
+};
+
+typedef struct {
+	WORD wAdcValue[16];
+	BYTE bAdcChannelNumber;
+	BYTE bAdcFlags;
+	BYTE bAnalogInput[8];
+	BOOL bButtonWasOn;
+	BOOL bButtonIsOn;
+} config_a_parameters;
+
+config_a_parameters _a;
 
 void Enter_Config_A(void)
 {
 	BYTE i = 0;
 
-	bCurrentConfig = bRequestedConfig;
+	_gainer.bCurrentConfig = _gainer.bRequestedConfig;
 
 	LoadConfig_config_a();
 
-	bContinuousAinRequested = FALSE;
-	bContinuousAinMask = 0x00;
-	bContinuousDinRequested = FALSE;
+	_gainer.bContinuousAinRequested = FALSE;
+	_gainer.bContinuousAinMask = 0x00;
+	_gainer.bContinuousDinRequested = FALSE;
 
-	bAdcChannelNumber = 0;
+	_a.bAdcChannelNumber = 0;
+	_a.bButtonWasOn = FALSE;
+	_a.bButtonIsOn = FALSE;
 
-	switch (bCurrentConfig) {
+	switch (_gainer.bCurrentConfig) {
 		case CONFIG_2:
 			// consigure number of each port type
-			bChannels_AIN = 8;
-			bChannels_DIN = 0;
-			bChannels_AOUT = 4;
-			bChannels_DOUT = 4;
+			_gainer.bChannels_AIN = 8;
+			_gainer.bChannels_DIN = 0;
+			_gainer.bChannels_AOUT = 4;
+			_gainer.bChannels_DOUT = 4;
 
 			// change drive mode of *in 1~8 to 'High-Z Analog' (DM[2:0] = '110')
 			PRT0DM2 = 0xFF;
@@ -103,10 +125,10 @@ void Enter_Config_A(void)
 
 		case CONFIG_3:
 			// consigure number of each port type
-			bChannels_AIN = 4;
-			bChannels_DIN = 4;
-			bChannels_AOUT = 8;
-			bChannels_DOUT = 0;
+			_gainer.bChannels_AIN = 4;
+			_gainer.bChannels_DIN = 4;
+			_gainer.bChannels_AOUT = 8;
+			_gainer.bChannels_DOUT = 0;
 
 			// connect PWM8 modules to *out 5~8
 			// enable global select (enable global bypass)
@@ -116,10 +138,10 @@ void Enter_Config_A(void)
 
 		case CONFIG_4:
 			// consigure number of each port type
-			bChannels_AIN = 8;
-			bChannels_DIN = 0;
-			bChannels_AOUT = 8;
-			bChannels_DOUT = 0;
+			_gainer.bChannels_AIN = 8;
+			_gainer.bChannels_DIN = 0;
+			_gainer.bChannels_AOUT = 8;
+			_gainer.bChannels_DOUT = 0;
 
 			// change drive mode of *in 1~8 to 'High-Z Analog' (DM[2:0] = '110')
 			PRT0DM2 = 0xFF;
@@ -161,10 +183,10 @@ void Enter_Config_A(void)
 			break;
 #endif	// ***** UNUSED *****
 		default:
-			bChannels_AIN = 4;
-			bChannels_DIN = 4;
-			bChannels_AOUT = 4;
-			bChannels_DOUT = 4;
+			_gainer.bChannels_AIN = 4;
+			_gainer.bChannels_DIN = 4;
+			_gainer.bChannels_AOUT = 4;
+			_gainer.bChannels_DOUT = 4;
 			break;
 	}
 
@@ -188,22 +210,6 @@ void Enter_Config_A(void)
 	PGA_A_2_Start(PGA_A_2_LOWPOWER);		// might be good lpf!?
 	DUALADC_A_Start(DUALADC_A_HIGHPOWER);	// try lower power later
 
-#if 0
-	// start analog outputs
-	Counter16_A_PWMClk_WritePeriod(155);	// 50Hz (i.e. 20ms)
-	Counter16_A_PWMClk_WriteCompareValue(0);
-	Counter16_A_PWMClk_Start();
-
-	// set period of all PWM8 modules to 255
-	PWM8_A_1_WritePeriod(255);
-	PWM8_A_2_WritePeriod(255);
-	PWM8_A_3_WritePeriod(255);
-	PWM8_A_4_WritePeriod(255);
-	PWM8_A_5_WritePeriod(255);
-	PWM8_A_6_WritePeriod(255);
-	PWM8_A_7_WritePeriod(255);
-	PWM8_A_8_WritePeriod(255);
-#else
 	// start analog outputs
 	Counter16_A_PWMClk_WritePeriod(7);	// 1000Hz (i.e. 1ms)
 	Counter16_A_PWMClk_WriteCompareValue(0);
@@ -219,7 +225,6 @@ void Enter_Config_A(void)
 	PWM8_A_6_WritePeriod(254);
 	PWM8_A_7_WritePeriod(254);
 	PWM8_A_8_WritePeriod(254);
-#endif
 
 	// set pulse width of all PWM8 modules to 0
 	PWM8_A_1_WritePulseWidth(0);
@@ -232,7 +237,7 @@ void Enter_Config_A(void)
 	PWM8_A_8_WritePulseWidth(0);
 
 	// enable used analog (actually PWM) outputs
-	switch (bChannels_AOUT) {
+	switch (_gainer.bChannels_AOUT) {
 		case 4:
 			PWM8_A_1_Start();
 			PWM8_A_2_Start();
@@ -305,43 +310,43 @@ void Main_Config_A(void)
 
 void handle_ain_event(void)
 {
-	AMUX4_A_1_InputSelect(bAdcChannelNumber);	// ain 1~4
-	AMUX4_A_2_InputSelect(bAdcChannelNumber);	// ain 5~8
+	AMUX4_A_1_InputSelect(_a.bAdcChannelNumber);	// ain 1~4
+	AMUX4_A_2_InputSelect(_a.bAdcChannelNumber);	// ain 5~8
 	
 	DUALADC_A_GetSamples(1);	// continuous sampling
 	while(DUALADC_A_fIsDataAvailable() == 0);  // Wait for data to be ready
-	wAdcValue[bAdcChannelNumber] = DUALADC_A_iGetData1ClearFlag();		// ain 1~4
-	wAdcValue[bAdcChannelNumber + 4] = DUALADC_A_iGetData2ClearFlag();	// ain 5~8
+	_a.wAdcValue[_a.bAdcChannelNumber] = DUALADC_A_iGetData1ClearFlag();		// ain 1~4
+	_a.wAdcValue[_a.bAdcChannelNumber + 4] = DUALADC_A_iGetData2ClearFlag();	// ain 5~8
 
-	bAdcChannelNumber++;
-	if (bAdcChannelNumber == 4) {
-		bAdcChannelNumber = 0;
-		bAdcFlags |= 0x01;
+	_a.bAdcChannelNumber++;
+	if (_a.bAdcChannelNumber == 4) {
+		_a.bAdcChannelNumber = 0;
+		_a.bAdcFlags |= 0x01;
 	}
 
 	// Check if all the 4 channels have been measured
-	if (bAdcFlags & 0x01) {
+	if (_a.bAdcFlags & 0x01) {
 		// ain 1~4
-		b_ain[3] = (BYTE)(wAdcValue[0] & 0x00FF);
-		b_ain[2] = (BYTE)(wAdcValue[1] & 0x00FF);
-		b_ain[1] = (BYTE)(wAdcValue[2] & 0x00FF);
-		b_ain[0] = (BYTE)(wAdcValue[3] & 0x00FF);
+		_a.bAnalogInput[3] = (BYTE)(_a.wAdcValue[0] & 0x00FF);
+		_a.bAnalogInput[2] = (BYTE)(_a.wAdcValue[1] & 0x00FF);
+		_a.bAnalogInput[1] = (BYTE)(_a.wAdcValue[2] & 0x00FF);
+		_a.bAnalogInput[0] = (BYTE)(_a.wAdcValue[3] & 0x00FF);
 
 		// ain 5~8
-		b_ain[7] = (BYTE)(wAdcValue[4] & 0x00FF);
-		b_ain[6] = (BYTE)(wAdcValue[5] & 0x00FF);
-		b_ain[5] = (BYTE)(wAdcValue[6] & 0x00FF);
-		b_ain[4] = (BYTE)(wAdcValue[7] & 0x00FF);
+		_a.bAnalogInput[7] = (BYTE)(_a.wAdcValue[4] & 0x00FF);
+		_a.bAnalogInput[6] = (BYTE)(_a.wAdcValue[5] & 0x00FF);
+		_a.bAnalogInput[5] = (BYTE)(_a.wAdcValue[6] & 0x00FF);
+		_a.bAnalogInput[4] = (BYTE)(_a.wAdcValue[7] & 0x00FF);
 
-		bAdcFlags &= ~0x01;
+		_a.bAdcFlags &= ~0x01;
 
 		// send ain data when measured all channels
-		if (bContinuousAinRequested) {
+		if (_gainer.bContinuousAinRequested) {
 			send_ain_values();
 		}
 
 		// send din data here to avaiod stupid sending
-		if (bContinuousDinRequested) {
+		if (_gainer.bContinuousDinRequested) {
 			send_din_values();
 		}
 	}
@@ -349,15 +354,15 @@ void handle_ain_event(void)
 
 void handle_button_event(void)
 {
-	bButtonIsOn = GET_BUTTON();
+	_a.bButtonIsOn = GET_BUTTON();
 
-	if (bButtonIsOn != bButtonWasOn) {
-		cReplyBuffer[0] = bButtonIsOn ? 'N' : 'F';
-		cReplyBuffer[1] = '*';
-		UART_A_Write(cReplyBuffer, 2);
+	if (_a.bButtonIsOn != _a.bButtonWasOn) {
+		_gainer.cReplyBuffer[0] = _a.bButtonIsOn ? 'N' : 'F';
+		_gainer.cReplyBuffer[1] = '*';
+		UART_A_Write(_gainer.cReplyBuffer, 2);
 	}
 
-	bButtonWasOn = bButtonIsOn;
+	_a.bButtonWasOn = _a.bButtonIsOn;
 }
 
 void handle_commands_config_a(void)
@@ -440,15 +445,15 @@ void handle_commands_config_a(void)
 				
 				default:
 					// seems to be an invalid command
-					cReplyBuffer[0] = '!';
-					cReplyBuffer[1] = '*';
+					_gainer.cReplyBuffer[0] = '!';
+					_gainer.cReplyBuffer[1] = '*';
 					bNumBytes = 2;
 					break;
 			}
 		}
 
 		if (bNumBytes > 0) {
-			UART_A_Write(cReplyBuffer, bNumBytes);
+			UART_A_Write(_gainer.cReplyBuffer, bNumBytes);
 		}
 
 		UART_A_CmdReset();					// Reset command buffer
@@ -461,8 +466,8 @@ BYTE command_set_dout_all(char *pCommand)
 	WORD value = 0;
 
 	if (5 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
@@ -472,20 +477,20 @@ BYTE command_set_dout_all(char *pCommand)
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 4));
 
 	// set all output ports
-	for (i = 0; i < bChannels_DOUT; i++) {
+	for (i = 0; i < _gainer.bChannels_DOUT; i++) {
 		set_dout(i, (value & (1 << i)));
 	}
 
-	if (!bVerboseMode) {
+	if (!_gainer.bVerboseMode) {
 		return 0;
 	}
 
-	cReplyBuffer[0] = 'D';
-	cReplyBuffer[1] = *(pCommand + 1);
-	cReplyBuffer[2] = *(pCommand + 2);
-	cReplyBuffer[3] = *(pCommand + 3);
-	cReplyBuffer[4] = *(pCommand + 4);
-	cReplyBuffer[5] = '*';
+	_gainer.cReplyBuffer[0] = 'D';
+	_gainer.cReplyBuffer[1] = *(pCommand + 1);
+	_gainer.cReplyBuffer[2] = *(pCommand + 2);
+	_gainer.cReplyBuffer[3] = *(pCommand + 3);
+	_gainer.cReplyBuffer[4] = *(pCommand + 4);
+	_gainer.cReplyBuffer[5] = '*';
 
 	return 6;
 }
@@ -495,33 +500,33 @@ BYTE command_set_dout_h(char *pCommand)
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
 	if (2 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	if (bChannels_DOUT < 1) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+	if (_gainer.bChannels_DOUT < 1) {
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	if (channel > (bChannels_DOUT - 1)) {
+	if (channel > (_gainer.bChannels_DOUT - 1)) {
 		// specified channel number seems to be invalid
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
 	set_dout(channel, TRUE);
 
-	if (!bVerboseMode) {
+	if (!_gainer.bVerboseMode) {
 		return 0;
 	}
 
-	cReplyBuffer[0] = 'H';
-	cReplyBuffer[1] = *(pCommand + 1);
-	cReplyBuffer[2] = '*';
+	_gainer.cReplyBuffer[0] = 'H';
+	_gainer.cReplyBuffer[1] = *(pCommand + 1);
+	_gainer.cReplyBuffer[2] = '*';
 
 	return 3;
 }
@@ -531,33 +536,33 @@ BYTE command_set_dout_l(char *pCommand)
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
 	if (2 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	if (bChannels_DOUT < 1) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+	if (_gainer.bChannels_DOUT < 1) {
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	if (channel > (bChannels_DOUT - 1)) {
+	if (channel > (_gainer.bChannels_DOUT - 1)) {
 		// specified channel number seems to be invalid
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
 	set_dout(channel, FALSE);
 
-	if (!bVerboseMode) {
+	if (!_gainer.bVerboseMode) {
 		return 0;
 	}
 
-	cReplyBuffer[0] = 'L';
-	cReplyBuffer[1] = *(pCommand + 1);
-	cReplyBuffer[2] = '*';
+	_gainer.cReplyBuffer[0] = 'L';
+	_gainer.cReplyBuffer[1] = *(pCommand + 1);
+	_gainer.cReplyBuffer[2] = '*';
 
 	return 3;
 }
@@ -568,13 +573,13 @@ BYTE command_set_aout_all(char *pCommand)
 	BYTE value = 0;
 	BYTE commandLength = 0;
 
-	if (bChannels_AOUT < 1) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+	if (_gainer.bChannels_AOUT < 1) {
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	switch (bChannels_AOUT) {
+	switch (_gainer.bChannels_AOUT) {
 		case 4:
 			commandLength = 9;
 			break;
@@ -589,12 +594,12 @@ BYTE command_set_aout_all(char *pCommand)
 
 	// should change 0 or 8 channel condition
 	if (commandLength != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	for (i = 0; i < bChannels_AOUT; i++) {
+	for (i = 0; i < _gainer.bChannels_AOUT; i++) {
 		pCommand++;
 		value = HEX_TO_BYTE(*pCommand);
 		pCommand++;
@@ -602,12 +607,12 @@ BYTE command_set_aout_all(char *pCommand)
 		set_aout(i, value);
 	}
 
-	if (!bVerboseMode) {
+	if (!_gainer.bVerboseMode) {
 		return 0;
 	}
 
-	cReplyBuffer[0] = 'A';
-	cReplyBuffer[1] = '*';
+	_gainer.cReplyBuffer[0] = 'A';
+	_gainer.cReplyBuffer[1] = '*';
 
 	return 2;
 }
@@ -618,17 +623,17 @@ BYTE command_set_aout_ch(char *pCommand)
 	BYTE value = 0;
 
 	if (4 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
 	channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (channel > (bChannels_AOUT - 1)) {
+	if (channel > (_gainer.bChannels_AOUT - 1)) {
 		// specified channel number seems to be invalid
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
@@ -637,15 +642,15 @@ BYTE command_set_aout_ch(char *pCommand)
 
 	set_aout(channel, value);
 
-	if (!bVerboseMode) {
+	if (!_gainer.bVerboseMode) {
 		return 0;
 	}
 
-	cReplyBuffer[0] = 'a';
-	cReplyBuffer[1] = *(pCommand + 1);
-	cReplyBuffer[2] = *(pCommand + 2);
-	cReplyBuffer[3] = *(pCommand + 3);
-	cReplyBuffer[4] = '*';
+	_gainer.cReplyBuffer[0] = 'a';
+	_gainer.cReplyBuffer[1] = *(pCommand + 1);
+	_gainer.cReplyBuffer[2] = *(pCommand + 2);
+	_gainer.cReplyBuffer[3] = *(pCommand + 3);
+	_gainer.cReplyBuffer[4] = '*';
 
 	return 5;
 }
@@ -655,46 +660,46 @@ BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
 	BYTE value = 0x00;
 
 	if (1 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	if (bChannels_DIN < 1) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+	if (_gainer.bChannels_DIN < 1) {
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	bContinuousDinRequested = bContinuous;
+	_gainer.bContinuousDinRequested = bContinuous;
 
-	switch (bChannels_DIN) {
+	switch (_gainer.bChannels_DIN) {
 		case 4:
-			value += GET_DIN_1() ? 0x01 : 0x00;
-			value += GET_DIN_2() ? 0x02 : 0x00;
-			value += GET_DIN_3() ? 0x04 : 0x00;
-			value += GET_DIN_4() ? 0x08 : 0x00;
+			value += A_GET_DIN_1() ? 0x01 : 0x00;
+			value += A_GET_DIN_2() ? 0x02 : 0x00;
+			value += A_GET_DIN_3() ? 0x04 : 0x00;
+			value += A_GET_DIN_4() ? 0x08 : 0x00;
 			break;
 
 		case 8:
-			value += GET_DIN_5() ? 0x01 : 0x00;
-			value += GET_DIN_6() ? 0x02 : 0x00;
-			value += GET_DIN_7() ? 0x04 : 0x00;
-			value += GET_DIN_8() ? 0x08 : 0x00;	
-			value += GET_DIN_1() ? 0x10 : 0x00;
-			value += GET_DIN_2() ? 0x20 : 0x00;
-			value += GET_DIN_3() ? 0x40 : 0x00;
-			value += GET_DIN_4() ? 0x80 : 0x00;
+			value += A_GET_DIN_5() ? 0x01 : 0x00;
+			value += A_GET_DIN_6() ? 0x02 : 0x00;
+			value += A_GET_DIN_7() ? 0x04 : 0x00;
+			value += A_GET_DIN_8() ? 0x08 : 0x00;	
+			value += A_GET_DIN_1() ? 0x10 : 0x00;
+			value += A_GET_DIN_2() ? 0x20 : 0x00;
+			value += A_GET_DIN_3() ? 0x40 : 0x00;
+			value += A_GET_DIN_4() ? 0x80 : 0x00;
 		break;
 
 		default:
 			break;
 	}
 
-	cReplyBuffer[0] = *pCommand;
-	ByteToHex(0x00, &cReplyBuffer[1]);	// 'x','x'
-	ByteToHex(value, &cReplyBuffer[3]);	// 'x','x'
-	cReplyBuffer[5] = '*';
+	_gainer.cReplyBuffer[0] = *pCommand;
+	ByteToHex(0x00, &_gainer.cReplyBuffer[1]);	// 'x','x'
+	ByteToHex(value, &_gainer.cReplyBuffer[3]);	// 'x','x'
+	_gainer.cReplyBuffer[5] = '*';
 
 	return 6;
 }
@@ -704,22 +709,22 @@ BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 	BYTE i = 0;
 
 	if (1 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	bContinuousAinRequested = bContinuous;
-	bContinuousAinMask = bContinuousAinRequested ? 0xFF : 0x00;
+	_gainer.bContinuousAinRequested = bContinuous;
+	_gainer.bContinuousAinMask = _gainer.bContinuousAinRequested ? 0xFF : 0x00;
 
-	cReplyBuffer[0] = *pCommand;
+	_gainer.cReplyBuffer[0] = *pCommand;
 
-	for (i = 0; i < bChannels_AIN; i++) {
-		ByteToHex(b_ain[i], &cReplyBuffer[(i * 2) + 1]);
+	for (i = 0; i < _gainer.bChannels_AIN; i++) {
+		ByteToHex(_a.bAnalogInput[i], &_gainer.cReplyBuffer[(i * 2) + 1]);
 	}
-	cReplyBuffer[(bChannels_AIN * 2) + 1] = '*';
+	_gainer.cReplyBuffer[(_gainer.bChannels_AIN * 2) + 1] = '*';
 
-	return ((bChannels_AIN * 2) + 2);	// 10 or 18 bytes
+	return ((_gainer.bChannels_AIN * 2) + 2);	// 10 or 18 bytes
 }
 
 BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
@@ -728,31 +733,31 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 	BYTE value = 0;
 
 	if (2 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	bContinuousAinRequested = bContinuous;
+	_gainer.bContinuousAinRequested = bContinuous;
 
 	channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (channel > (bChannels_AIN - 1)) {
+	if (channel > (_gainer.bChannels_AIN - 1)) {
 		// specified channel number seems to be invalid
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	if (bContinuousAinRequested) {
-		bContinuousAinMask = 1 << channel;	// e.g. 0x10 means 4th channel
+	if (_gainer.bContinuousAinRequested) {
+		_gainer.bContinuousAinMask = 1 << channel;	// e.g. 0x10 means 4th channel
 	} else {
-		bContinuousAinMask = 0x00;
+		_gainer.bContinuousAinMask = 0x00;
 	}
 
-	cReplyBuffer[0] = *pCommand;
-	ByteToHex(b_ain[channel], &cReplyBuffer[1]);
-	cReplyBuffer[3] = '*';
+	_gainer.cReplyBuffer[0] = *pCommand;
+	ByteToHex(_a.bAnalogInput[channel], &_gainer.cReplyBuffer[1]);
+	_gainer.cReplyBuffer[3] = '*';
 
 	return 4;
 }
@@ -760,16 +765,16 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 BYTE command_stop_cont(void)
 {
 	if (1 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	bContinuousAinRequested = FALSE;
-	bContinuousAinMask = 0x00;
-	bContinuousDinRequested = FALSE;
-	cReplyBuffer[0] = 'E';
-	cReplyBuffer[1] = '*';
+	_gainer.bContinuousAinRequested = FALSE;
+	_gainer.bContinuousAinMask = 0x00;
+	_gainer.bContinuousDinRequested = FALSE;
+	_gainer.cReplyBuffer[0] = 'E';
+	_gainer.cReplyBuffer[1] = '*';
 
 	return 2;
 }
@@ -777,19 +782,19 @@ BYTE command_stop_cont(void)
 BYTE command_set_led_h(void)
 {
 	if (1 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
 	SET_LED_H();
 
-	if (!bVerboseMode) {
+	if (!_gainer.bVerboseMode) {
 		return 0;
 	}
 
-	cReplyBuffer[0] = 'h';
-	cReplyBuffer[1] = '*';
+	_gainer.cReplyBuffer[0] = 'h';
+	_gainer.cReplyBuffer[1] = '*';
 
 	return 2;
 }
@@ -797,19 +802,19 @@ BYTE command_set_led_h(void)
 BYTE command_set_led_l(void)
 {
 	if (1 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
 	SET_LED_L();
 
-	if (!bVerboseMode) {
+	if (!_gainer.bVerboseMode) {
 		return 0;
 	}
 
-	cReplyBuffer[0] = 'l';
-	cReplyBuffer[1] = '*';
+	_gainer.cReplyBuffer[0] = 'l';
+	_gainer.cReplyBuffer[1] = '*';
 
 	return 2;
 }
@@ -820,24 +825,24 @@ BYTE command_set_gain(char *pCommand)
 	BYTE reference = HEX_TO_BYTE(*(pCommand + 2));
 
 	if (3 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
 	// gain: 0 ~ 15 (x1.00 ~ x48.0)
 	if (gain > 15) {
 		// specified gain seems to be invalid
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
 	// reference: 0 ~ 1 (VSS or AGND)
 	if (reference > 1) {
 		// specified reference seems to be invalid
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
@@ -860,10 +865,10 @@ BYTE command_set_gain(char *pCommand)
 			break;
 	}
 
-	cReplyBuffer[0] = 'G';
-	cReplyBuffer[1] = *(pCommand + 1);
-	cReplyBuffer[2] = *(pCommand + 2);
-	cReplyBuffer[3] = '*';
+	_gainer.cReplyBuffer[0] = 'G';
+	_gainer.cReplyBuffer[1] = *(pCommand + 1);
+	_gainer.cReplyBuffer[2] = *(pCommand + 2);
+	_gainer.cReplyBuffer[3] = '*';
 
 	return 4;
 }
@@ -871,15 +876,15 @@ BYTE command_set_gain(char *pCommand)
 BYTE command_reboot_a(void)
 {
 	if (1 != UART_A_bCmdLength()) {
-		cReplyBuffer[0] = '!';
-		cReplyBuffer[1] = '*';
+		_gainer.cReplyBuffer[0] = '!';
+		_gainer.cReplyBuffer[1] = '*';
 		return 2;
 	}
 
-	bQuitRequested = TRUE;
+	_gainer.bQuitRequested = TRUE;
 
-	cReplyBuffer[0] = 'Q';
-	cReplyBuffer[1] = '*';
+	_gainer.cReplyBuffer[0] = 'Q';
+	_gainer.cReplyBuffer[1] = '*';
 
 	return 2;
 }
@@ -928,27 +933,27 @@ BOOL set_aout(BYTE channel, BYTE value)
 
 BOOL set_dout(BYTE channel, WORD value)
 {
-	switch (bChannels_DOUT) {
+	switch (_gainer.bChannels_DOUT) {
 		case 4:
 			switch (channel) {
-				case 0: if (value) SET_DOUT_1_H(); else SET_DOUT_1_L(); break;
-				case 1: if (value) SET_DOUT_2_H(); else SET_DOUT_2_L(); break;
-				case 2: if (value) SET_DOUT_3_H(); else SET_DOUT_3_L(); break;
-				case 3: if (value) SET_DOUT_4_H(); else SET_DOUT_4_L(); break;
+				case 0: if (value) A_SET_DOUT_1_H(); else A_SET_DOUT_1_L(); break;
+				case 1: if (value) A_SET_DOUT_2_H(); else A_SET_DOUT_2_L(); break;
+				case 2: if (value) A_SET_DOUT_3_H(); else A_SET_DOUT_3_L(); break;
+				case 3: if (value) A_SET_DOUT_4_H(); else A_SET_DOUT_4_L(); break;
 				default: break;
 			}
 			break;
 
 		case 8:
 			switch (channel) {
-				case 0: if (value) SET_DOUT_5_H(); else SET_DOUT_5_L(); break;		
-				case 1: if (value) SET_DOUT_6_H(); else SET_DOUT_6_L(); break;
-				case 2: if (value) SET_DOUT_7_H(); else SET_DOUT_7_L(); break;
-				case 3: if (value) SET_DOUT_8_H(); else SET_DOUT_8_L(); break;
-				case 4: if (value) SET_DOUT_1_H(); else SET_DOUT_1_L(); break;
-				case 5: if (value) SET_DOUT_2_H(); else SET_DOUT_2_L(); break;
-				case 6: if (value) SET_DOUT_3_H(); else SET_DOUT_3_L(); break;
-				case 7: if (value) SET_DOUT_4_H(); else SET_DOUT_4_L(); break;
+				case 0: if (value) A_SET_DOUT_5_H(); else A_SET_DOUT_5_L(); break;		
+				case 1: if (value) A_SET_DOUT_6_H(); else A_SET_DOUT_6_L(); break;
+				case 2: if (value) A_SET_DOUT_7_H(); else A_SET_DOUT_7_L(); break;
+				case 3: if (value) A_SET_DOUT_8_H(); else A_SET_DOUT_8_L(); break;
+				case 4: if (value) A_SET_DOUT_1_H(); else A_SET_DOUT_1_L(); break;
+				case 5: if (value) A_SET_DOUT_2_H(); else A_SET_DOUT_2_L(); break;
+				case 6: if (value) A_SET_DOUT_3_H(); else A_SET_DOUT_3_L(); break;
+				case 7: if (value) A_SET_DOUT_4_H(); else A_SET_DOUT_4_L(); break;
 				default: break;
 			}
 			break;
@@ -966,43 +971,43 @@ void send_ain_values(void)
 	BYTE channel = 0;
 	BYTE i = 0;
 
-	if (bChannels_AIN < 1) {
+	if (_gainer.bChannels_AIN < 1) {
 		return;
 	}
 
-	if (0xFF == bContinuousAinMask) {
-		cReplyBuffer[0] = 'i';
+	if (0xFF == _gainer.bContinuousAinMask) {
+		_gainer.cReplyBuffer[0] = 'i';
 
-		for (i = 0; i < bChannels_AIN; i++) {
-			ByteToHex(b_ain[i], &cReplyBuffer[(i * 2) + 1]);
+		for (i = 0; i < _gainer.bChannels_AIN; i++) {
+			ByteToHex(_a.bAnalogInput[i], &_gainer.cReplyBuffer[(i * 2) + 1]);
 		}
 
-		cReplyBuffer[(bChannels_AIN * 2) + 1] = '*';
-		length = (bChannels_AIN * 2) + 2;	// 10 or 18 bytes
+		_gainer.cReplyBuffer[(_gainer.bChannels_AIN * 2) + 1] = '*';
+		length = (_gainer.bChannels_AIN * 2) + 2;	// 10 or 18 bytes
 	} else {
-		if (bContinuousAinMask & 0x80) {
+		if (_gainer.bContinuousAinMask & 0x80) {
 			channel = 7;
-		} else if (bContinuousAinMask & 0x40) {
+		} else if (_gainer.bContinuousAinMask & 0x40) {
 			channel = 6;
-		} else if (bContinuousAinMask & 0x20) {
+		} else if (_gainer.bContinuousAinMask & 0x20) {
 			channel = 5;
-		} else if (bContinuousAinMask & 0x10) {
+		} else if (_gainer.bContinuousAinMask & 0x10) {
 			channel = 4;
-		} else if (bContinuousAinMask & 0x04) {
+		} else if (_gainer.bContinuousAinMask & 0x04) {
 			channel = 3;
-		} else if (bContinuousAinMask & 0x04) {
+		} else if (_gainer.bContinuousAinMask & 0x04) {
 			channel = 2;
-		} else if (bContinuousAinMask & 0x02) {
+		} else if (_gainer.bContinuousAinMask & 0x02) {
 			channel = 1;
 		}
 
-		cReplyBuffer[0] = 's';
-		ByteToHex(b_ain[channel], &cReplyBuffer[1]);
-		cReplyBuffer[3] = '*';
+		_gainer.cReplyBuffer[0] = 's';
+		ByteToHex(_a.bAnalogInput[channel], &_gainer.cReplyBuffer[1]);
+		_gainer.cReplyBuffer[3] = '*';
 		length = 4;
 	}
 
-	UART_A_Write(cReplyBuffer, length);
+	UART_A_Write(_gainer.cReplyBuffer, length);
 }
 
 void send_din_values(void)
@@ -1010,40 +1015,40 @@ void send_din_values(void)
 	BYTE length = 0;
 	BYTE value = 0;
 
-	if (bChannels_DIN < 1) {
+	if (_gainer.bChannels_DIN < 1) {
 		return;
 	}
 
-	switch (bChannels_DIN) {
+	switch (_gainer.bChannels_DIN) {
 		case 4:
-			value += GET_DIN_1() ? 0x01 : 0x00;
-			value += GET_DIN_2() ? 0x02 : 0x00;
-			value += GET_DIN_3() ? 0x04 : 0x00;
-			value += GET_DIN_4() ? 0x08 : 0x00;
+			value += A_GET_DIN_1() ? 0x01 : 0x00;
+			value += A_GET_DIN_2() ? 0x02 : 0x00;
+			value += A_GET_DIN_3() ? 0x04 : 0x00;
+			value += A_GET_DIN_4() ? 0x08 : 0x00;
 			break;
 
 		case 8:
-			value += GET_DIN_5() ? 0x01 : 0x00;
-			value += GET_DIN_6() ? 0x02 : 0x00;
-			value += GET_DIN_7() ? 0x04 : 0x00;
-			value += GET_DIN_8() ? 0x08 : 0x00;
-			value += GET_DIN_1() ? 0x10 : 0x00;
-			value += GET_DIN_2() ? 0x20 : 0x00;
-			value += GET_DIN_3() ? 0x40 : 0x00;
-			value += GET_DIN_4() ? 0x80 : 0x00;
+			value += A_GET_DIN_5() ? 0x01 : 0x00;
+			value += A_GET_DIN_6() ? 0x02 : 0x00;
+			value += A_GET_DIN_7() ? 0x04 : 0x00;
+			value += A_GET_DIN_8() ? 0x08 : 0x00;
+			value += A_GET_DIN_1() ? 0x10 : 0x00;
+			value += A_GET_DIN_2() ? 0x20 : 0x00;
+			value += A_GET_DIN_3() ? 0x40 : 0x00;
+			value += A_GET_DIN_4() ? 0x80 : 0x00;
 			break;
 
 		default:
 			break;
 	}
 
-	cReplyBuffer[0] = 'r';
-	ByteToHex(0x00, &cReplyBuffer[1]);	// 'x', 'x'
-	ByteToHex(value, &cReplyBuffer[3]);	// 'x', 'x'
-	cReplyBuffer[5] = '*';
+	_gainer.cReplyBuffer[0] = 'r';
+	ByteToHex(0x00, &_gainer.cReplyBuffer[1]);	// 'x', 'x'
+	ByteToHex(value, &_gainer.cReplyBuffer[3]);	// 'x', 'x'
+	_gainer.cReplyBuffer[5] = '*';
 	length = 6;
 
-	UART_A_Write(cReplyBuffer, length);
+	UART_A_Write(_gainer.cReplyBuffer, length);
 }
 
 void init_output_ports(void)
@@ -1051,12 +1056,15 @@ void init_output_ports(void)
 	BYTE i = 0;
 
 	// initialize analog outputs
-	for (i = 0; i < bChannels_AOUT; i++) {
+	for (i = 0; i < _gainer.bChannels_AOUT; i++) {
 		set_aout(i, 0);
 	}
 
 	// initialize digital outputs
-	for (i = 0; i < bChannels_DOUT; i++) {
+	for (i = 0; i < _gainer.bChannels_DOUT; i++) {
 		set_dout(i, FALSE);
 	}
+
+	// turn off the LED
+	SET_LED_L();
 }

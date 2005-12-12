@@ -58,23 +58,23 @@ void Enter_Config_B(void);
 void Exit_Config_B(void);
 void Main_Config_B(void);
 
-extern BOOL bContinuousAinRequested;
-extern BYTE bContinuousAinMask;
-extern BOOL bContinuousDinRequested;
-extern BOOL bQuitRequested;
-extern BYTE bCurrentConfig;
-extern BYTE bRequestedConfig;
-extern char cReplyBuffer[32];
-extern const BYTE bGainTable[16];
-extern WORD wAdcValue[16];
-extern BYTE bAdcChannelNumber;
-extern BYTE bAdcFlags;
-extern BOOL bVerboseMode;
+typedef struct {
+	BOOL bContinuousAinRequested;
+	BYTE bContinuousAinMask;
+	BOOL bContinuousDinRequested;
+	BOOL bQuitRequested;
+	BYTE bCurrentConfig;
+	BYTE bRequestedConfig;
+	char cReplyBuffer[32];
+	BOOL bVerboseMode;
 
-extern BYTE bChannels_AIN;
-extern BYTE bChannels_AOUT;
-extern BYTE bChannels_DIN;
-extern BYTE bChannels_DOUT;
+	BYTE bChannels_AIN;
+	BYTE bChannels_AOUT;
+	BYTE bChannels_DIN;
+	BYTE bChannels_DOUT;
+} global_parameters;
+
+extern global_parameters _gainer;
 
 /**
  * utility functions
