@@ -39,6 +39,7 @@ const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I'
 WORD wAdcValue[16];
 BYTE bAdcChannelNumber;
 BYTE bAdcFlags;
+BOOL bVerboseMode = TRUE;
 
 BYTE bChannels_AIN = 0;
 BYTE bChannels_AOUT = 0;
@@ -51,6 +52,7 @@ BYTE bChannels_DOUT = 0;
 void handle_commands_config_start(void);
 BYTE handle_config_command(char *pCommand);
 BYTE command_reboot(void);
+BYTE command_verbose(char *pCommand);
 
 void main()
 {
@@ -65,11 +67,12 @@ void main()
 			case CONFIG_1:
 			case CONFIG_2:
 			case CONFIG_3:
+			case CONFIG_4:
 				Main_Config_A();
 				break;
 
-			case CONFIG_4:
 			case CONFIG_5:
+			case CONFIG_6:
 				Main_Config_B();
 				break;
 
@@ -88,17 +91,18 @@ void main()
 				case CONFIG_1:
 				case CONFIG_2:
 				case CONFIG_3:
+				case CONFIG_4:
 					Exit_Config_A();
 					break;
 	
-				case CONFIG_4:
 				case CONFIG_5:
+				case CONFIG_6:
 					Exit_Config_B();
 					break;
 
-			default:
-				break;
-		}
+				default:
+					break;
+			}
 
 			M8C_Reset;
 		}
@@ -164,11 +168,12 @@ void Main_Config_Start()
 		case CONFIG_1:
 		case CONFIG_2:
 		case CONFIG_3:
+		case CONFIG_4:
 			Exit_Config_A();
 			break;
 
-		case CONFIG_4:
 		case CONFIG_5:
+		case CONFIG_6:
 			Exit_Config_B();
 			break;
 
@@ -184,11 +189,12 @@ void Main_Config_Start()
 		case CONFIG_1:
 		case CONFIG_2:
 		case CONFIG_3:
+		case CONFIG_4:
 			Enter_Config_A();
 			break;
 
-		case CONFIG_4:
 		case CONFIG_5:
+		case CONFIG_6:
 			Enter_Config_B();
 			break;
 
@@ -204,7 +210,7 @@ void handle_commands_config_start()
 	if (UART_bCmdCheck()) {					// Wait for command    
 		if(pCommand = UART_szGetParam()) {
 			switch (*pCommand) {
-				case 'K':
+				case 'K':	// configuration (KONFIGURATION_n)
 					UART_Write(cReplyBuffer, handle_config_command(pCommand));
 					WaitForBriefSpells();
 					break;
@@ -212,6 +218,10 @@ void handle_commands_config_start()
 				case 'Q':	// reboot (Q)
 					UART_Write(cReplyBuffer, command_reboot());
 					WaitForBriefSpells();
+					break;
+				
+				case 'V':	// verbose (V)
+					UART_Write(cReplyBuffer, command_verbose(pCommand));
 					break;
 				
 				default:
@@ -286,6 +296,10 @@ BYTE handle_config_command(char *pCommand)
 			bRequestedConfig = CONFIG_5;
 			break;
 
+		case '6':	// i.e. 'KONFIGURATION_6'
+			bRequestedConfig = CONFIG_6;
+			break;
+
 		default:
 			// seems to be an invalid command
 			// replace the reply buffer with error string
@@ -311,6 +325,34 @@ BYTE command_reboot(void)
 	cReplyBuffer[1] = '*';
 
 	return 2;
+}
+
+BYTE command_verbose(char *pCommand)
+{
+	char * p = pCommand;
+
+	if (2 != UART_bCmdLength()) {
+		cReplyBuffer[0] = '!';
+		cReplyBuffer[1] = '*';
+		return 2;
+	}
+
+	p++;
+	
+	switch (*p) {
+		case '0':
+			bVerboseMode = FALSE;
+			break;
+
+		default:
+			break;
+	}
+
+	cReplyBuffer[0] = 'V';
+	cReplyBuffer[1] = *p;
+	cReplyBuffer[2] = '*';
+
+	return 3;
 }
 
 const char cHexString[16] = "0123456789ABCDEF";

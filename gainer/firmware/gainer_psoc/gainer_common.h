@@ -26,10 +26,12 @@ enum {
 	CONFIG_1,			// C1:    4:   4:   4:   4
 	CONFIG_2,			// C2:    8:   0:   4:   4
 	CONFIG_3,			// C3:    4:   4:   8:   0
-	CONFIG_4,			// C4:    0:  16:   0:   0
-	CONFIG_5,			// C5:    0:   0:   0:  16
-	CONFIG_6,			// C6: LED matrix control mode???
-	CONFIG_7			// C7: CapSense mode???
+	CONFIG_4,			// C4:    8:   0:   8:   0
+	CONFIG_5,			// C5:    0:  16:   0:   0
+	CONFIG_6,			// C6:    0:   0:   0:  16
+	CONFIG_7,			// C7: LED matrix control mode???
+	CONFIG_8,			// C8: CapSense mode???
+	CONFIG_9			// C9: R/C servo control???
 };
 
 /**
@@ -67,6 +69,7 @@ extern const BYTE bGainTable[16];
 extern WORD wAdcValue[16];
 extern BYTE bAdcChannelNumber;
 extern BYTE bAdcFlags;
+extern BOOL bVerboseMode;
 
 extern BYTE bChannels_AIN;
 extern BYTE bChannels_AOUT;
