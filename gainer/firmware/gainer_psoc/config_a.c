@@ -100,7 +100,39 @@ void Enter_Config_A(void)
 			// change select of *in 1~8 to 'Analog'
 			// <nothing to do!?>
 			break;
-/*
+
+		case CONFIG_3:
+			// consigure number of each port type
+			bChannels_AIN = 4;
+			bChannels_DIN = 4;
+			bChannels_AOUT = 8;
+			bChannels_DOUT = 0;
+
+			// connect PWM8 modules to *out 5~8
+			// enable global select (enable global bypass)
+			PRT1GS |= 0x54;		// connect P1[2], P1[4] and P1[6] to global bus
+			PRT2GS |= 0x01;		// connect P2[0] to global bus
+			break;
+
+		case CONFIG_4:
+			// consigure number of each port type
+			bChannels_AIN = 8;
+			bChannels_DIN = 0;
+			bChannels_AOUT = 8;
+			bChannels_DOUT = 0;
+
+			// change drive mode of *in 1~8 to 'High-Z Analog' (DM[2:0] = '110')
+			PRT0DM2 = 0xFF;
+			PRT0DM1 = 0xFF;
+			PRT0DM0 = 0x00;
+
+			// connect PWM8 modules to *out 5~8
+			// enable global select (enable global bypass)
+			PRT1GS |= 0x54;		// connect P1[2], P1[4] and P1[6] to global bus
+			PRT2GS |= 0x01;		// connect P2[0] to global bus
+			break;
+
+#if 0	// ***** UNUSED *****
 		case CONFIG_3:
 			// consigure number of each port type
 			bChannels_AIN = 0;
@@ -115,20 +147,7 @@ void Enter_Config_A(void)
 			// change select of *in 1~8 to 'StdCPU'
 			// <nothing to do!?>
 			break;
-*/
-		case CONFIG_3:
-			// consigure number of each port type
-			bChannels_AIN = 4;
-			bChannels_DIN = 4;
-			bChannels_AOUT = 8;
-			bChannels_DOUT = 0;
 
-			// connect PWM8 modules to *out 5~8
-			// enable global select (enable global bypass)
-			PRT1GS |= 0x54;		// connect P1[2], P1[4] and P1[6] to global bus
-			PRT2GS |= 0x01;		// connect P2[0] to global bus
-			break;
-/*
 		case CONFIG_5:
 			// consigure number of each port type
 			bChannels_AIN = 4;
@@ -140,7 +159,7 @@ void Enter_Config_A(void)
 			// disable global select (disable global bypass)
 			PRT2GS &= 0x55;		// disconnect P2[1], P2[3], P2[5] and P2[7] from global bus
 			break;
-*/
+#endif	// ***** UNUSED *****
 		default:
 			bChannels_AIN = 4;
 			bChannels_DIN = 4;
@@ -186,7 +205,7 @@ void Enter_Config_A(void)
 	PWM8_A_8_WritePeriod(255);
 #else
 	// start analog outputs
-	Counter16_A_PWMClk_WritePeriod(157);	// 50Hz (i.e. 20ms)
+	Counter16_A_PWMClk_WritePeriod(7);	// 1000Hz (i.e. 1ms)
 	Counter16_A_PWMClk_WriteCompareValue(0);
 	Counter16_A_PWMClk_Start();
 
@@ -457,6 +476,10 @@ BYTE command_set_dout_all(char *pCommand)
 		set_dout(i, (value & (1 << i)));
 	}
 
+	if (!bVerboseMode) {
+		return 0;
+	}
+
 	cReplyBuffer[0] = 'D';
 	cReplyBuffer[1] = *(pCommand + 1);
 	cReplyBuffer[2] = *(pCommand + 2);
@@ -492,6 +515,10 @@ BYTE command_set_dout_h(char *pCommand)
 
 	set_dout(channel, TRUE);
 
+	if (!bVerboseMode) {
+		return 0;
+	}
+
 	cReplyBuffer[0] = 'H';
 	cReplyBuffer[1] = *(pCommand + 1);
 	cReplyBuffer[2] = '*';
@@ -523,6 +550,10 @@ BYTE command_set_dout_l(char *pCommand)
 	}
 
 	set_dout(channel, FALSE);
+
+	if (!bVerboseMode) {
+		return 0;
+	}
 
 	cReplyBuffer[0] = 'L';
 	cReplyBuffer[1] = *(pCommand + 1);
@@ -571,6 +602,10 @@ BYTE command_set_aout_all(char *pCommand)
 		set_aout(i, value);
 	}
 
+	if (!bVerboseMode) {
+		return 0;
+	}
+
 	cReplyBuffer[0] = 'A';
 	cReplyBuffer[1] = '*';
 
@@ -601,6 +636,10 @@ BYTE command_set_aout_ch(char *pCommand)
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 3));
 
 	set_aout(channel, value);
+
+	if (!bVerboseMode) {
+		return 0;
+	}
 
 	cReplyBuffer[0] = 'a';
 	cReplyBuffer[1] = *(pCommand + 1);
@@ -745,6 +784,10 @@ BYTE command_set_led_h(void)
 
 	SET_LED_H();
 
+	if (!bVerboseMode) {
+		return 0;
+	}
+
 	cReplyBuffer[0] = 'h';
 	cReplyBuffer[1] = '*';
 
@@ -760,6 +803,10 @@ BYTE command_set_led_l(void)
 	}
 
 	SET_LED_L();
+
+	if (!bVerboseMode) {
+		return 0;
+	}
 
 	cReplyBuffer[0] = 'l';
 	cReplyBuffer[1] = '*';
