@@ -234,8 +234,7 @@ void handle_commands_config_start()
 				
 				default:
 					// seems to be an invalid command
-					_gainer.cReplyBuffer[0] = '!';
-					_gainer.cReplyBuffer[1] = '*';
+					PutErrorStringToReplyBuffer();
 					UART_Write(_gainer.cReplyBuffer, 2);
 					break;
 			}
@@ -330,8 +329,7 @@ BYTE handle_config_command(char *pCommand)
 BYTE command_reboot(void)
 {
 	if (1 != UART_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -348,8 +346,7 @@ BYTE command_verbose(char *pCommand)
 	char * p = pCommand;
 
 	if (2 != UART_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 

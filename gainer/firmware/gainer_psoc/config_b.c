@@ -261,14 +261,12 @@ void config_b_handle_commands(void)
 BYTE config_b_command_get_din_all(char *pCommand, BOOL bContinuous)
 {
 	if (1 != UART_B_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (_gainer.bChannels_DIN < 1) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -287,14 +285,12 @@ BYTE config_b_command_set_dout_all(char *pCommand)
 	WORD value = 0;
 
 	if (5 != UART_B_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (_gainer.bChannels_DOUT < 1) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -327,21 +323,18 @@ BYTE config_b_command_set_dout_ch_h(char *pCommand)
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
 	if (2 != UART_B_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (_gainer.bChannels_DOUT < 1) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (channel > (_gainer.bChannels_DOUT - 1)) {
 		// specified channel number seems to be invalid
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -363,21 +356,18 @@ BYTE config_b_command_set_dout_ch_l(char *pCommand)
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
 	if (2 != UART_B_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (_gainer.bChannels_DOUT < 1) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (channel > (_gainer.bChannels_DOUT - 1)) {
 		// specified channel number seems to be invalid
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -397,8 +387,7 @@ BYTE config_b_command_set_dout_ch_l(char *pCommand)
 BYTE config_b_command_stop_cont(void)
 {
 	if (1 != UART_B_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -414,8 +403,7 @@ BYTE config_b_command_stop_cont(void)
 BYTE config_b_command_reboot(void)
 {
 	if (1 != UART_B_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 

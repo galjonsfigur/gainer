@@ -94,8 +94,7 @@ void config_c_handle_commands(void)
 BYTE config_c_command_reboot(void)
 {
 	if (1 != UART_C_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 

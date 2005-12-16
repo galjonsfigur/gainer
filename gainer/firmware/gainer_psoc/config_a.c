@@ -466,8 +466,7 @@ BYTE command_set_dout_all(char *pCommand)
 	WORD value = 0;
 
 	if (5 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -500,21 +499,18 @@ BYTE command_set_dout_h(char *pCommand)
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
 	if (2 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (_gainer.bChannels_DOUT < 1) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (channel > (_gainer.bChannels_DOUT - 1)) {
 		// specified channel number seems to be invalid
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -536,21 +532,18 @@ BYTE command_set_dout_l(char *pCommand)
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
 	if (2 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (_gainer.bChannels_DOUT < 1) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (channel > (_gainer.bChannels_DOUT - 1)) {
 		// specified channel number seems to be invalid
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -574,8 +567,7 @@ BYTE command_set_aout_all(char *pCommand)
 	BYTE commandLength = 0;
 
 	if (_gainer.bChannels_AOUT < 1) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -594,8 +586,7 @@ BYTE command_set_aout_all(char *pCommand)
 
 	// should change 0 or 8 channel condition
 	if (commandLength != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -623,8 +614,7 @@ BYTE command_set_aout_ch(char *pCommand)
 	BYTE value = 0;
 
 	if (4 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -632,8 +622,7 @@ BYTE command_set_aout_ch(char *pCommand)
 
 	if (channel > (_gainer.bChannels_AOUT - 1)) {
 		// specified channel number seems to be invalid
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -660,14 +649,12 @@ BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
 	BYTE value = 0x00;
 
 	if (1 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	if (_gainer.bChannels_DIN < 1) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -709,8 +696,7 @@ BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 	BYTE i = 0;
 
 	if (1 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -733,8 +719,7 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 	BYTE value = 0;
 
 	if (2 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -744,8 +729,7 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 
 	if (channel > (_gainer.bChannels_AIN - 1)) {
 		// specified channel number seems to be invalid
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -765,8 +749,7 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 BYTE command_stop_cont(void)
 {
 	if (1 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -782,8 +765,7 @@ BYTE command_stop_cont(void)
 BYTE command_set_led_h(void)
 {
 	if (1 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -802,8 +784,7 @@ BYTE command_set_led_h(void)
 BYTE command_set_led_l(void)
 {
 	if (1 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -825,24 +806,21 @@ BYTE command_set_gain(char *pCommand)
 	BYTE reference = HEX_TO_BYTE(*(pCommand + 2));
 
 	if (3 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	// gain: 0 ~ 15 (x1.00 ~ x48.0)
 	if (gain > 15) {
 		// specified gain seems to be invalid
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
 	// reference: 0 ~ 1 (VSS or AGND)
 	if (reference > 1) {
 		// specified reference seems to be invalid
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
@@ -876,8 +854,7 @@ BYTE command_set_gain(char *pCommand)
 BYTE command_reboot_a(void)
 {
 	if (1 != UART_A_bCmdLength()) {
-		_gainer.cReplyBuffer[0] = '!';
-		_gainer.cReplyBuffer[1] = '*';
+		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
