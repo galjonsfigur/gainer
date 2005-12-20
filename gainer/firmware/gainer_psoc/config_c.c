@@ -14,55 +14,80 @@ BYTE config_c_command_set_aout_column(char *pCommand);
 BYTE config_c_command_reboot(void);
 
 /**
- * private variables of CONFIG_C
+ * private definitions and variables of CONFIG_C
  */
 #define bPOLY_255 0xB8	// Modular Polynomial = [8,6,5,4]
 #define	bSEED_255 0xFF	// initial seed value
+#define	bSEED_000 0x00	// initial seed value
 
-//                                    P0[7] P0[5] P0[3] P0[1] P0[6] P0[4] P0[2] P0[0]
-const BYTE bColumnSelectionMask[8] = {0x7F, 0xDF, 0xF7, 0xFD, 0xBF, 0xEF, 0xFB, 0xFE};
+const BYTE bScanLineSelectionMask[8] = {
+	0x7F,	// P0[7]
+	0xDF,	// P0[5]
+	0xF7,	// P0[3]
+	0xFD,	// P0[1]
+	0xBF,	// P0[6]
+	0xEF,	// P0[4]
+	0xFB,	// P0[2]
+	0xFE	// P0[0]
+};
 
 typedef struct {
-	BYTE bData[8][8];	// 8 rows by 8 columns
-	BYTE bCurrentColumn;
+	BYTE bData[8][8];	// 8 columns (x) by 8 rows (y)
+	BYTE bCurrentScanLine;
+	BYTE bType;
 } config_c_parameters;
+
+enum {
+	COMMON_K_TYPE = 0,
+	COMMON_A_TYPE
+};
 
 config_c_parameters _c;
 
 void Counter8_C_Service_ISR(void)
 {
-	PRT0DR = 0xFF;	// disable all columns to turn off all LEDs
+	PRT0DR = 0xFF;	// disable all scan lines to turn off all LEDs
 
-#if 1
-	// cathode common type
-	PRS8_C_0_WriteSeed(_c.bData[_c.bCurrentColumn][0]);
-	PRS8_C_1_WriteSeed(_c.bData[_c.bCurrentColumn][1]);
-	PRS8_C_2_WriteSeed(_c.bData[_c.bCurrentColumn][2]);
-	PRS8_C_3_WriteSeed(_c.bData[_c.bCurrentColumn][3]);
-	PRS8_C_4_WriteSeed(_c.bData[_c.bCurrentColumn][4]);
-	PRS8_C_5_WriteSeed(_c.bData[_c.bCurrentColumn][5]);
-	PRS8_C_6_WriteSeed(_c.bData[_c.bCurrentColumn][6]);
-	PRS8_C_7_WriteSeed(_c.bData[_c.bCurrentColumn][7]);
-#else
-	// anode common type
-	PRS8_C_0_WriteSeed(_c.bData[0][_c.bCurrentColumn]);
-	PRS8_C_1_WriteSeed(_c.bData[1][_c.bCurrentColumn]);
-	PRS8_C_2_WriteSeed(_c.bData[2][_c.bCurrentColumn]);
-	PRS8_C_3_WriteSeed(_c.bData[3][_c.bCurrentColumn]);
-	PRS8_C_4_WriteSeed(_c.bData[4][_c.bCurrentColumn]);
-	PRS8_C_5_WriteSeed(_c.bData[5][_c.bCurrentColumn]);
-	PRS8_C_6_WriteSeed(_c.bData[6][_c.bCurrentColumn]);
-	PRS8_C_7_WriteSeed(_c.bData[7][_c.bCurrentColumn]);
-#endif
+	switch (_c.bType) {
+		case COMMON_K_TYPE:
+			// O: ROW (Y)
+			// I: COL (X) (i.e. column is scan line)
+			PRS8_C_0_WriteSeed(_c.bData[_c.bCurrentScanLine][0]);
+			PRS8_C_1_WriteSeed(_c.bData[_c.bCurrentScanLine][1]);
+			PRS8_C_2_WriteSeed(_c.bData[_c.bCurrentScanLine][2]);
+			PRS8_C_3_WriteSeed(_c.bData[_c.bCurrentScanLine][3]);
+			PRS8_C_4_WriteSeed(_c.bData[_c.bCurrentScanLine][4]);
+			PRS8_C_5_WriteSeed(_c.bData[_c.bCurrentScanLine][5]);
+			PRS8_C_6_WriteSeed(_c.bData[_c.bCurrentScanLine][6]);
+			PRS8_C_7_WriteSeed(_c.bData[_c.bCurrentScanLine][7]);
+			break;
 
-	PRT0DR = bColumnSelectionMask[_c.bCurrentColumn];
+		case COMMON_A_TYPE:
+			// O: COL (X)
+			// I: ROW (Y) (i.e. row is scan line)
+			PRS8_C_0_WriteSeed(_c.bData[0][_c.bCurrentScanLine]);
+			PRS8_C_1_WriteSeed(_c.bData[1][_c.bCurrentScanLine]);
+			PRS8_C_2_WriteSeed(_c.bData[2][_c.bCurrentScanLine]);
+			PRS8_C_3_WriteSeed(_c.bData[3][_c.bCurrentScanLine]);
+			PRS8_C_4_WriteSeed(_c.bData[4][_c.bCurrentScanLine]);
+			PRS8_C_5_WriteSeed(_c.bData[5][_c.bCurrentScanLine]);
+			PRS8_C_6_WriteSeed(_c.bData[6][_c.bCurrentScanLine]);
+			PRS8_C_7_WriteSeed(_c.bData[7][_c.bCurrentScanLine]);
+			break;
 
-	_c.bCurrentColumn = (_c.bCurrentColumn + 1) & 0x07;	// i.e. 0~7
+		default:
+			break;
+	}
+
+	// set the current scan line low to turn on LEDs of the scan line
+	PRT0DR = bScanLineSelectionMask[_c.bCurrentScanLine];
+
+	_c.bCurrentScanLine = (_c.bCurrentScanLine + 1) & 0x07;	// i.e. 0~7
 }
 
 void Enter_Config_C(void)
 {
-	BYTE x, y;
+	BYTE column, row;
 
 	_gainer.bCurrentConfig = _gainer.bRequestedConfig;
 
@@ -70,13 +95,13 @@ void Enter_Config_C(void)
 	_gainer.bContinuousAinMask = 0x00;
 	_gainer.bContinuousDinRequested = FALSE;
 
-	for (y = 0; y < 7; y++) {
-		for (x = 0; x < 7; x++) {
-			_c.bData[x][y] = 0;
+	for (row = 0; row < 7; row++) {
+		for (column = 0; column < 7; column++) {
+			_c.bData[column][row] = 0;
 		}
 	}
 
-#if 1
+#if 0
 	// THIS IS A TEST...
 	_c.bData[0][0] = 0x02;
 	_c.bData[1][1] = 0x04;
@@ -106,7 +131,8 @@ void Enter_Config_C(void)
 	_c.bData[0][7] = 0xFF;
 #endif
 
-	_c.bCurrentColumn = 0;
+	_c.bCurrentScanLine = 0;
+	_c.bType = COMMON_K_TYPE;
 
 	LoadConfig_config_c();
 
@@ -123,14 +149,14 @@ void Enter_Config_C(void)
 	PRS8_C_7_WritePolynomial(bPOLY_255);
 
 	// write initial seed values
-	PRS8_C_0_WriteSeed(bSEED_255);
-	PRS8_C_1_WriteSeed(bSEED_255);
-	PRS8_C_2_WriteSeed(bSEED_255);
-	PRS8_C_3_WriteSeed(bSEED_255);
-	PRS8_C_4_WriteSeed(bSEED_255);
-	PRS8_C_5_WriteSeed(bSEED_255);
-	PRS8_C_6_WriteSeed(bSEED_255);
-	PRS8_C_7_WriteSeed(bSEED_255);
+	PRS8_C_0_WriteSeed(bSEED_000);
+	PRS8_C_1_WriteSeed(bSEED_000);
+	PRS8_C_2_WriteSeed(bSEED_000);
+	PRS8_C_3_WriteSeed(bSEED_000);
+	PRS8_C_4_WriteSeed(bSEED_000);
+	PRS8_C_5_WriteSeed(bSEED_000);
+	PRS8_C_6_WriteSeed(bSEED_000);
+	PRS8_C_7_WriteSeed(bSEED_000);
 
 	// start PRS8 modules
 	PRS8_C_0_Start();
