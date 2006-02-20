@@ -12,25 +12,20 @@ global_parameters _gainer;
  * private functions of CONFIG_START
  */
 const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
+const char cVersionString[] = {'1','.','0','.','0','.','8'};
 
 void handle_commands_config_start(void);
 BYTE handle_config_command(char *pCommand);
 BYTE command_reboot(void);
 BYTE command_verbose(char *pCommand);
+BYTE command_version(char *pCommand);
+void init_global_parameters(void);
+void change_configuration(BYTE from, BYTE to);
 
 void main()
 {
-	_gainer.bContinuousAinRequested = FALSE;
-	_gainer.bContinuousAinMask = 0x0000;
-	_gainer.bContinuousDinRequested = FALSE;
-	_gainer.bQuitRequested = FALSE;
 	_gainer.bCurrentConfig = CONFIG_START;
 	_gainer.bRequestedConfig = CONFIG_START;
-	_gainer.bVerboseMode = TRUE;
-	_gainer.bChannels_AIN = 0;
-	_gainer.bChannels_AOUT = 0;
-	_gainer.bChannels_DIN = 0;
-	_gainer.bChannels_DOUT = 0;
 
 	Enter_Config_Start();	// enter CONFIG_START
 
@@ -65,6 +60,17 @@ void main()
 		}
 
 		if (_gainer.bQuitRequested) {
+#if 1
+			// just change configuration
+			if (CONFIG_START == _gainer.bCurrentConfig) {
+				// We don't have to do reboot, so just clear the quit-requested flag.
+				_gainer.bQuitRequested = FALSE;
+			} else {
+				_gainer.bRequestedConfig = CONFIG_START;
+				change_configuration(_gainer.bCurrentConfig, _gainer.bRequestedConfig);
+			}
+#else
+			// do actual software reset
 			WaitForBriefSpells();
 
 			switch (_gainer.bCurrentConfig) {
@@ -97,6 +103,7 @@ void main()
 			}
 
 			M8C_Reset;
+#endif
 		}
 	}
 }
@@ -104,6 +111,8 @@ void main()
 void Enter_Config_Start()
 {
 	_gainer.bCurrentConfig = CONFIG_START;
+
+	init_global_parameters();
 
 	LoadConfig_gainer();
 
@@ -118,7 +127,7 @@ void Enter_Config_Start()
 	PRT2DM1 &= ~0x40;
 	PRT2DM0 |= 0x40;
 
-	UART_CPutString("!!!*");
+///	UART_CPutString("!!!*");
 
 #if SERIAL_DEBUG_ENABLED
 	UART_CPutString("\r\nEnter_Config_Start()\r\n");
@@ -152,63 +161,7 @@ void Main_Config_Start()
 		return;	// have nothing to do :)
 	}
 
-	switch (_gainer.bCurrentConfig) {
-		case CONFIG_START:
-			Exit_Config_Start();
-			break;
-
-		case CONFIG_1:
-		case CONFIG_2:
-		case CONFIG_3:
-		case CONFIG_4:
-			Exit_Config_A();
-			break;
-
-		case CONFIG_5:
-		case CONFIG_6:
-			Exit_Config_B();
-			break;
-
-		case CONFIG_7:
-			Exit_Config_C();
-			break;
-
-		case CONFIG_8:
-			Exit_Config_D();
-			break;
-
-		default:
-			break;
-	}
-
-	switch (_gainer.bRequestedConfig) {
-		case CONFIG_START:
-			Enter_Config_Start();
-			break;
-
-		case CONFIG_1:
-		case CONFIG_2:
-		case CONFIG_3:
-		case CONFIG_4:
-			Enter_Config_A();
-			break;
-
-		case CONFIG_5:
-		case CONFIG_6:
-			Enter_Config_B();
-			break;
-
-		case CONFIG_7:
-			Enter_Config_C();
-			break;
-
-		case CONFIG_8:
-			Enter_Config_D();
-			break;
-
-		default:
-			break;
-	}
+	change_configuration(_gainer.bCurrentConfig, _gainer.bRequestedConfig);
 }
 
 void handle_commands_config_start()
@@ -230,6 +183,10 @@ void handle_commands_config_start()
 				
 				case 'V':	// verbose (V)
 					UART_Write(_gainer.cReplyBuffer, command_verbose(pCommand));
+					break;
+				
+				case '?':	// version (?)
+					UART_Write(_gainer.cReplyBuffer, command_version(pCommand));
 					break;
 				
 				default:
@@ -368,6 +325,29 @@ BYTE command_verbose(char *pCommand)
 	return 3;
 }
 
+BYTE command_version(char *pCommand)
+{
+	char * p = pCommand;
+
+	if (1 != UART_bCmdLength()) {
+		PutErrorStringToReplyBuffer();
+		return 2;
+	}
+
+	// e.g. "?1.0.0.6*"
+	_gainer.cReplyBuffer[0] = '?';
+	_gainer.cReplyBuffer[1] = cVersionString[0];
+	_gainer.cReplyBuffer[2] = cVersionString[1];
+	_gainer.cReplyBuffer[3] = cVersionString[2];
+	_gainer.cReplyBuffer[4] = cVersionString[3];
+	_gainer.cReplyBuffer[5] = cVersionString[4];
+	_gainer.cReplyBuffer[6] = cVersionString[5];
+	_gainer.cReplyBuffer[7] = cVersionString[6];
+	_gainer.cReplyBuffer[8] = '*';
+
+	return 9;
+}
+
 const char cHexString[16] = "0123456789ABCDEF";
 
 /**
@@ -398,4 +378,82 @@ void PutErrorStringToReplyBuffer(void)
 {
 	_gainer.cReplyBuffer[0] = '!';
 	_gainer.cReplyBuffer[1] = '*';
+}
+
+void init_global_parameters(void)
+{
+	_gainer.bContinuousAinRequested = FALSE;
+	_gainer.bContinuousAinMask = 0x0000;
+	_gainer.bContinuousDinRequested = FALSE;
+	_gainer.bQuitRequested = FALSE;
+//	_gainer.bCurrentConfig = CONFIG_START;
+//	_gainer.bRequestedConfig = CONFIG_START;
+	_gainer.bVerboseMode = TRUE;
+	_gainer.bChannels_AIN = 0;
+	_gainer.bChannels_AOUT = 0;
+	_gainer.bChannels_DIN = 0;
+	_gainer.bChannels_DOUT = 0;
+}
+
+void change_configuration(BYTE from, BYTE to)
+{
+	WaitForBriefSpells();
+
+	switch (from) {
+		case CONFIG_START:
+			Exit_Config_Start();
+			break;
+
+		case CONFIG_1:
+		case CONFIG_2:
+		case CONFIG_3:
+		case CONFIG_4:
+			Exit_Config_A();
+			break;
+
+		case CONFIG_5:
+		case CONFIG_6:
+			Exit_Config_B();
+			break;
+
+		case CONFIG_7:
+			Exit_Config_C();
+			break;
+
+		case CONFIG_8:
+			Exit_Config_D();
+			break;
+
+		default:
+			break;
+	}
+
+	switch (to) {
+		case CONFIG_START:
+			Enter_Config_Start();
+			break;
+
+		case CONFIG_1:
+		case CONFIG_2:
+		case CONFIG_3:
+		case CONFIG_4:
+			Enter_Config_A();
+			break;
+
+		case CONFIG_5:
+		case CONFIG_6:
+			Enter_Config_B();
+			break;
+
+		case CONFIG_7:
+			Enter_Config_C();
+			break;
+
+		case CONFIG_8:
+			Enter_Config_D();
+			break;
+
+		default:
+			break;
+	}
 }
