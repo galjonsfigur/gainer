@@ -1,0 +1,317 @@
+<html>
+<head>
+<title>Gainer &raquo; Reference &raquo; Processing 1.0 (BETA)</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="../../processing_beta.css">
+
+<script language="JavaScript">
+<!--
+function gogo(dropdown) {
+  var tempURL = dropdown.options[dropdown.selectedIndex].value;
+  if(tempURL!="") {
+    document.location.href = tempURL;
+  }
+}
+
+function MM_swapImgRestore() { //v3.0
+  var i,x,a=document.MM_sr; for(i=0;a&&i<a.length&&(x=a[i])&&x.oSrc;i++) x.src=x.oSrc;
+}
+
+function MM_preloadImages() { //v3.0
+  var d=document; if(d.images){ if(!d.MM_p) d.MM_p=new Array();
+    var i,j=d.MM_p.length,a=MM_preloadImages.arguments; for(i=0; i<a.length; i++)
+    if (a[i].indexOf("#")!=0){ d.MM_p[j]=new Image; d.MM_p[j++].src=a[i];}}
+}
+
+function MM_findObj(n, d) { //v3.0
+  var p,i,x;  if(!d) d=document; if((p=n.indexOf("?"))>0&&parent.frames.length) {
+    d=parent.frames[n.substring(p+1)].document; n=n.substring(0,p);}
+  if(!(x=d[n])&&d.all) x=d.all[n]; for (i=0;!x&&i<d.forms.length;i++) x=d.forms[i][n];
+  for(i=0;!x&&d.layers&&i<d.layers.length;i++) x=MM_findObj(n,d.layers[i].document); return x;
+}
+
+function MM_swapImage() { //v3.0
+  var i,j=0,x,a=MM_swapImage.arguments; document.MM_sr=new Array; for(i=0;i<(a.length-2);i+=3)
+   if ((x=MM_findObj(a[i]))!=null){document.MM_sr[j++]=x; if(!x.oSrc) x.oSrc=x.src; x.src=a[i+2];}
+}
+//-->
+</script>
+
+</head>
+<body>
+<table width="750" border="0" cellspacing="0" cellpadding="0" bgcolor="#0">
+  <tr>
+    <td width="550" colspan="2" bgcolor="#000000">
+      <a href="http://processing.org"><img src="../../images/processing_beta.gif" width="500" height="50" align="top" border="0"></a><a name="top"></a></td>
+    <td width="180" align="right" valign="top" bgcolor="#000000">&nbsp;</td>
+    <td width="20" bgcolor="#000000">&nbsp;</td>
+  </tr></table>
+<table width="750" border="0" cellspacing="0" cellpadding="0">
+  <tr> 
+    <td width="55" height="25" bgcolor="#5A5A46">&nbsp;</td>
+    <td width="675" height="25" valign="middle" bgcolor="#5A5A46"><a href="../../index.html"><font color="#FFFFFF">Language</font></a>
+      <font color="#CCCCBE">\ </font> <a href="../../environment/index.html"><font color="#FFFFFF">Environment</font></a><font color="#CCCCBE"> \ </font> <a href="../index.html"><font color="#CCCCBE">Libraries</font></a><font color="#CCCCBE"> \ </font> <a href="../../compare/index.html"><font color="#FFFFFF">Comparison</font></a></font></td>
+    <td width="20" bgcolor="#5A5A46">&nbsp;</td>
+  </tr>
+</table>
+<table width="750" border="0" cellspacing="0" cellpadding="0" bgcolor="#FFFFFF">
+  <tr> 
+    <td width="55"><img src="../../images/1pix.gif" width="55" height="25"></td>
+    <td width="675" valign="bottom">&nbsp;</td>
+    <td width="20">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="55" align="right"><a href="javascript:window.history.go(-1)"><img src="../../images/back_off.gif" width="38" height="30" border="0"></a></td>
+    <td width="675" valign="middle"><a href="javascript:window.history.go(-1)">Back</a></td>
+    <td width="20">&nbsp;</td>
+  </tr>
+</table>
+
+<table width="750" border="0" cellspacing="0" cellpadding="0" bgcolor="#FFFFFF">
+  <tr> 
+    <td width="55"><img src="../../images/1pix.gif" width="55" height="25"></td>
+    <td width="675" valign="bottom">&nbsp;</td>
+    <td width="20">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="55" align="right">&nbsp;</td>
+    <td width="675" valign="middle"><font color="#006699"> If you see any errors or have any comments, <a href="http://processing.org/discourse/yabb_beta/YaBB.cgi?board=WebsiteBugs">let us know</a>.</font></td>
+    <td width="20">&nbsp;</td>
+  </tr>
+</table>
+
+<table width="750" border="0" cellspacing="0" cellpadding="0" bgcolor="#FFFFFF">
+  <tr> 
+    <td width="55"><img src="../../images/1pix.gif" width="55" height="1"></td>
+    <td width="675" valign="bottom">
+    
+
+      <table width="675" border="0" cellspacing="0" cellpadding="0">
+          <tr> 
+            <td width="100"><img src="../../images/1pix.gif" width="100" height="40"></td>
+            <td width="20"><img src="../../images/1pix.gif" width="20" height="1"></td>
+            <td width="555"><img src="../../images/1pix.gif" width="555" height="1"></td>
+          </tr>
+
+
+	<tr>
+		<td valign=top>Class</td>
+		<td valign=top>&nbsp;</td>
+	<td valign=top>
+	
+Gainer	</td></tr>
+           <tr> 
+            <td><img src="images/1pix.gif" width="1" height="25"></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+
+	<tr>
+		<td valign=top>Name</td>
+		<td valign=top>&nbsp;</td>
+	<td valign=top>
+	
+<h3>peekAnalogInput()</h3>	</td></tr>
+           <tr> 
+            <td><img src="images/1pix.gif" width="1" height="25"></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+
+	<tr>
+		<td valign=top>Examples</td>
+		<td valign=top>&nbsp;</td>
+	<td valign=top>
+	
+<table width=550 border=0 cellspacing=0 cellpadding=0 bgcolor=#FFFFFF><tr><td width=550 valign=top>
+<pre>// Example   input analog port(once)
+
+import processing.gainer.*;
+
+Gainer gainer;
+PFont myFont;
+
+void setup() {
+  size(300, 255);
+  myFont = loadFont("CourierNewPSMT-24.vlw");
+  textFont(myFont, 24);
+
+  gainer = new Gainer(this, "COM4"); 
+}
+
+void draw() { 
+  background(0);
+ 
+  text("analogInput[0]: " +gainer.analogInput[0],10,80); 
+  text("analogInput[1]: " +gainer.analogInput[1],10,110);
+  text("analogInput[2]: " +gainer.analogInput[2],10,140);
+  text("analogInput[3]: " +gainer.analogInput[3],10,170);
+
+}
+  
+void mousePressed()
+{
+  gainer.peekAnalogInput();
+}
+  
+ 
+</pre></td></tr>
+<tr><td valign=top>
+<br></td></tr>
+</table>	</td></tr>
+
+	<tr>
+		<td valign=top>Description</td>
+		<td valign=top>&nbsp;</td>
+	<td valign=top>
+	
+It makes bring values to analogInput[] from analog input ports at one time. command "S*"</td></tr>
+           <tr> 
+            <td><img src="images/1pix.gif" width="1" height="25"></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+
+	<tr>
+		<td valign=top>Syntax</td>
+		<td valign=top>&nbsp;</td>
+	<td valign=top>
+	
+<pre><font color="#996600">gainer</font>.peekAnalogInput()
+</pre>	</td>
+
+</tr>
+           <tr> 
+            <td><img src="images/1pix.gif" width="1" height="25"></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+
+	<tr>
+		<td valign=top>Parameters</td>
+		<td valign=top>&nbsp;</td>
+	<td valign=top>
+	
+<table width=550 border=0 cellspacing=0 cellpadding=0><tr>
+<td width=90 valign=top>gainer</td>
+<td width=20>&nbsp;</td>
+<td width=440 valign=top>any variable of type Gainer<br><br></td>
+</table>           <tr> 
+            <td><img src="images/1pix.gif" width="1" height="25"></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+
+	<tr>
+		<td valign=top>Returns</td>
+		<td valign=top>&nbsp;</td>
+	<td valign=top>
+	
+void	</td></tr>
+           <tr> 
+            <td><img src="images/1pix.gif" width="1" height="25"></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+
+	<tr>
+		<td valign=top>Usage</td>
+		<td valign=top>&nbsp;</td>
+	<td valign=top>
+	
+Application	</td></tr>
+           <tr> 
+            <td><img src="images/1pix.gif" width="1" height="25"></td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+	 </table>
+    </td>
+    <td width="20">&nbsp;</td>
+  </tr>
+</table>
+
+<table width="750" border="0" cellspacing="0" cellpadding="0" bgcolor="#FFFFFF">
+  <tr> 
+    <td width="55">&nbsp;<br /><br /><br /><br /><br /><br /><br /></td>
+    <td width="675" valign="bottom">&nbsp;</td>
+    <td width="20">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="55" align="right">&nbsp;</td>
+    <td width="675" valign="middle" align="left">
+      <br />
+      Updated:??
+<br />
+    </td>
+    <td width="20">&nbsp;</td>
+  </tr>
+</table>
+
+<table width="750" border="0" cellspacing="0" cellpadding="0" bgcolor="#FFFFFF">
+  <tr> 
+    <td width="55">&nbsp;<br /><br /><br /><br /><br /><br /><br /><br /></td>
+    <td width="675" valign="top">
+
+<!-- Creative Commons License -->
+<br />
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/2.0/"><img alt="Creative Commons License" border="0" src="http://creativecommons.org/images/public/somerights20.gif" /></a>
+
+
+<!--
+
+<rdf:RDF xmlns="http://web.resource.org/cc/"
+ xmlns:dc="http://purl.org/dc/elements/1.1/"
+ xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<Work rdf:about="">
+   <dc:title>Processing.org Reference</dc:title>
+   <dc:date>2004</dc:date>
+   <dc:description>Reference for the Processing.org programming environment and language.</dc:description>
+   <dc:creator><Agent>
+      <dc:title>Casey Reas et al.</dc:title>
+   </Agent></dc:creator>
+   <dc:rights><Agent>
+      <dc:title>Casey Reas</dc:title>
+   </Agent></dc:rights>
+   <dc:type rdf:resource="http://purl.org/dc/dcmitype/Text" />
+   <license rdf:resource="http://creativecommons.org/licenses/by-nc-sa/2.0/" />
+</Work>
+
+<License rdf:about="http://creativecommons.org/licenses/by-nc-sa/2.0/">
+   <permits rdf:resource="http://web.resource.org/cc/Reproduction" />
+   <permits rdf:resource="http://web.resource.org/cc/Distribution" />
+   <requires rdf:resource="http://web.resource.org/cc/Notice" />
+   <requires rdf:resource="http://web.resource.org/cc/Attribution" />
+   <prohibits rdf:resource="http://web.resource.org/cc/CommercialUse" />
+   <permits rdf:resource="http://web.resource.org/cc/DerivativeWorks" />
+   <requires rdf:resource="http://web.resource.org/cc/ShareAlike" />
+</License>
+
+</rdf:RDF>
+
+-->
+
+
+    </td>
+    <td width="20">&nbsp;</td>
+  </tr>  
+  <tr> 
+    <td width="55" bgcolor="#5A5A4E">&nbsp;</td>
+    <td width="675" valign="middle" bgcolor="#5A5A4E">
+      <font color="#FFFFFF">Processing is an open project initiated by</font> 
+      <a href="http://www.benfry.com"><font color="#FFFFFF">Ben Fry</font></a> <font color="#FFFFFF">and</font> 
+      <a href="http://www.reas.com"><font color="#FFFFFF">Casey Reas</font></a>
+    </td>
+    <td width="20" bgcolor="#5A5A4E" height="25">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="55" bgcolor="#000000">&nbsp;</td>
+    <td width="675" valign="middle" bgcolor="#000000">
+      <a href="http://processing.org/copyright.html"><font color="#FFFFFF">&copy; Info</font></a>
+    </td>
+    <td width="20" bgcolor="#000000" height="25">&nbsp;</td>
+  </tr>
+</table>
+</body>
+</html>
+
