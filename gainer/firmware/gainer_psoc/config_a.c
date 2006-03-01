@@ -29,6 +29,10 @@
 #define A_SET_DOUT_7_L() (PRT2DR&=0xF7)	// P2[3]
 #define A_SET_DOUT_8_L() (PRT2DR&=0xFD)	// P2[1]
 
+#define MIN(A,B)	(((A)<(B))?(A):(B))
+#define MAX(A,B)	(((A)>(B))?(A):(B))
+#define ABS(X)		(((X)>0x80)?((X)-0x80):(0x80-(X)))	// NOTE: valid for BYTE only
+
 /**
  * private functions of CONFIG_A
  */
@@ -58,6 +62,8 @@ void send_din_values(void);
 
 void init_output_ports(void);
 
+void prepare_ain_values(void);
+
 /**
  * private variables of CONFIG_A
  */
@@ -80,11 +86,19 @@ const BYTE bGainTable[16] = {
 	PGA_A_1_G48_0,	// GFx
 };
 
+enum {
+	PGA_REFERENCE_VSS,
+	PGA_REFERENCE_AGND
+};
+
 typedef struct {
 	WORD wAdcValue[16];
 	BYTE bAdcChannelNumber;
 	BYTE bAdcFlags;
 	BYTE bAnalogInput[8];
+	BYTE bAnalogInputMin[8];
+	BYTE bAnalogInputMax[8];
+	BYTE bPgaReference;
 	BOOL bButtonWasOn;
 	BOOL bButtonIsOn;
 } config_a_parameters;
@@ -104,6 +118,14 @@ void Enter_Config_A(void)
 	_gainer.bContinuousDinRequested = FALSE;
 
 	_a.bAdcChannelNumber = 0;
+
+	for (i = 0; i < _gainer.bChannels_AIN; i++) {
+		_a.bAnalogInputMax[i] = 0x00;
+		_a.bAnalogInputMin[i] = 0xFF;
+	}
+
+	_a.bPgaReference = PGA_REFERENCE_VSS;
+
 	_a.bButtonWasOn = FALSE;
 	_a.bButtonIsOn = FALSE;
 
@@ -310,6 +332,8 @@ void Main_Config_A(void)
 
 void handle_ain_event(void)
 {
+	BYTE i = 0;
+
 	AMUX4_A_1_InputSelect(_a.bAdcChannelNumber);	// ain 1~4
 	AMUX4_A_2_InputSelect(_a.bAdcChannelNumber);	// ain 5~8
 	
@@ -340,9 +364,15 @@ void handle_ain_event(void)
 
 		_a.bAdcFlags &= ~0x01;
 
-		// send ain data when measured all channels
 		if (_gainer.bContinuousAinRequested) {
+			// send ain data when measured all channels
 			send_ain_values();
+		} else {
+			// update min and max values
+			for (i = 0; i < _gainer.bChannels_AIN; i++) {
+				_a.bAnalogInputMin[i] = MIN(_a.bAnalogInputMin[i], _a.bAnalogInput[i]);
+				_a.bAnalogInputMax[i] = MAX(_a.bAnalogInputMax[i], _a.bAnalogInput[i]);
+			}
 		}
 
 		// send din data here to avaiod stupid sending
@@ -705,6 +735,8 @@ BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 
 	_gainer.cReplyBuffer[0] = *pCommand;
 
+	prepare_ain_values();
+
 	for (i = 0; i < _gainer.bChannels_AIN; i++) {
 		ByteToHex(_a.bAnalogInput[i], &_gainer.cReplyBuffer[(i * 2) + 1]);
 	}
@@ -738,6 +770,8 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 	} else {
 		_gainer.bContinuousAinMask = 0x00;
 	}
+
+	prepare_ain_values();
 
 	_gainer.cReplyBuffer[0] = *pCommand;
 	ByteToHex(_a.bAnalogInput[channel], &_gainer.cReplyBuffer[1]);
@@ -832,11 +866,13 @@ BYTE command_set_gain(char *pCommand)
 		case 0:	// VSS (10b)
 			PGA_A_1_GAIN_CR0 = (PGA_A_1_GAIN_CR0 & 0xFC) | 0x02;
 			PGA_A_2_GAIN_CR0 = (PGA_A_2_GAIN_CR0 & 0xFC) | 0x02;
+			_a.bPgaReference = PGA_REFERENCE_VSS;
 			break;
 
 		case 1:	// AGND (01b)
 			PGA_A_1_GAIN_CR0 = (PGA_A_1_GAIN_CR0 & 0xFC) | 0x01;
 			PGA_A_2_GAIN_CR0 = (PGA_A_2_GAIN_CR0 & 0xFC) | 0x01;
+			_a.bPgaReference = PGA_REFERENCE_AGND;
 			break;
 
 		default:
@@ -1044,4 +1080,30 @@ void init_output_ports(void)
 
 	// turn off the LED
 	SET_LED_L();
+}
+
+void prepare_ain_values(void)
+{
+	BYTE a = 0;
+	BYTE b = 0;
+	BYTE i = 0;
+
+	if (PGA_REFERENCE_VSS == _a.bPgaReference) {
+		for (i = 0; i < _gainer.bChannels_AIN; i++) {
+			_a.bAnalogInput[i] = _a.bAnalogInputMax[i];
+		}
+	} else {
+		for (i = 0; i < _gainer.bChannels_AIN; i++) {
+			a = _a.bAnalogInputMin[i];
+			b = _a.bAnalogInputMax[i];
+
+			_a.bAnalogInput[i] = (ABS(a) > ABS(b)) ? a : b;
+		}
+	}
+
+	// initialize max and min values
+	for (i = 0; i < _gainer.bChannels_AIN; i++) {
+		_a.bAnalogInputMax[i] = 0x00;
+		_a.bAnalogInputMin[i] = 0xFF;
+	}
 }
