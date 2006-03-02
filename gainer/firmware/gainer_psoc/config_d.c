@@ -37,9 +37,9 @@ void Timer16_D_ISR(void);
 void config_d_handle_commands(void);
 BYTE config_d_command_get_din_all(char *pCommand, BOOL bContinuous);
 BYTE config_d_command_set_dout_all(char *pCommand);
-BYTE config_d_command_set_dout_ch_h(char *pCommand);
-BYTE config_d_command_set_dout_ch_l(char *pCommand);
-BYTE config_d_command_stop_cont(void);
+//BYTE config_d_command_set_dout_ch_h(char *pCommand);
+//BYTE config_d_command_set_dout_ch_l(char *pCommand);
+//BYTE config_d_command_stop_cont(void);
 BYTE config_d_command_reboot(void);
 
 BOOL config_d_set_dout(BYTE channel, WORD value);
@@ -154,6 +154,7 @@ void Exit_Config_D(void)
 	AMUX4_D_Stop();
 	CMPPRG_D_Stop();
 	Timer8_D_Stop();
+	Timer16_D_DisableInt();
 	Timer16_D_Stop();
 
 	UART_D_Stop();
@@ -189,27 +190,27 @@ void config_d_handle_commands(void)
 				case 'R':	// get all digital inputs (R)
 					bNumBytes = config_d_command_get_din_all(pCommand, FALSE);
 					break;
-				
+/*				
 				case 'r':	// get all digital inputs (continuous) (r)
 					bNumBytes = config_d_command_get_din_all(pCommand, TRUE);
 					break;
-
+*/
 				case 'D':	// set all digital outputs (Dxxxx)
 					bNumBytes = config_d_command_set_dout_all(pCommand);
 					break;
-				
+/*				
 				case 'H':	// set the digital output high (Hn)
 					bNumBytes = config_d_command_set_dout_ch_h(pCommand);
 					break;
-				
+
 				case 'L':	// set the digital output low (Ln)
 					bNumBytes = config_d_command_set_dout_ch_l(pCommand);
 					break;
-				
+
 				case 'E':	// stop continuous sampling
 					bNumBytes = config_d_command_stop_cont();
 					break;
-				
+*/				
 				case 'Q':	// reboot (Q)
 					bNumBytes = config_d_command_reboot();
 					break;
@@ -300,7 +301,7 @@ BYTE config_d_command_set_dout_all(char *pCommand)
 
 	return 6;
 }
-
+/*
 BYTE config_d_command_set_dout_ch_h(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
@@ -382,7 +383,7 @@ BYTE config_d_command_stop_cont(void)
 
 	return 2;
 }
-
+*/
 BYTE config_d_command_reboot(void)
 {
 	if (1 != UART_D_bCmdLength()) {
