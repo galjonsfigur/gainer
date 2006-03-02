@@ -3,7 +3,7 @@
 #include <FlashBlock.h>
 
 #define LAST_BLOCK_TO_CHECK	0		// Minimum = 1; Maximum = 455; if 0 then don't calculate CS
-#define ENABLE_CONNECT_BY_PSOC	1	// 0-disable 	1-enable
+#define ENABLE_CONNECT_BY_PSOC	0	// 0-disable 	1-enable
 
 #pragma text:BootCheckSum
 #pragma abs_address:0x7200
