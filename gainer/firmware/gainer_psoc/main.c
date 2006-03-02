@@ -168,6 +168,12 @@ void handle_commands_config_start()
 {
 	char * pCommand;						// Parameter pointer
 
+	// reset Rx buffer if it seems to be broken
+	if (UART_bErrCheck()) {
+		UART_CmdReset();
+		return;
+	}
+
 	if (UART_bCmdCheck()) {					// Wait for command    
 		if(pCommand = UART_szGetParam()) {
 			switch (*pCommand) {
