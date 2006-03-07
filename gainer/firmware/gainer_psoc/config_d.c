@@ -165,7 +165,13 @@ void Exit_Config_D(void)
 	PRT2DM1 |= 0x40;
 	PRT2DM0 &= ~0x40;
 
+#if 0
+	// When backed to configuration 0, Rx side of UART won't work
 	UnloadConfig_config_d();
+#else
+	// A workaround to fix bug ID 1441410
+	UnloadConfig_Total();
+#endif
 }
 
 void Main_Config_D(void)
