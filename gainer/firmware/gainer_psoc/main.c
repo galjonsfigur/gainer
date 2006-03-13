@@ -3,6 +3,8 @@
 //----------------------------------------------------------------------------
 
 #include <m8c.h>        // part specific constants and macros
+#include <string.h>
+
 #include "PSoCAPI.h"    // PSoC API definitions for all User Modules
 #include "gainer_common.h"
 
@@ -12,7 +14,7 @@ global_parameters _gainer;
  * private functions of CONFIG_START
  */
 const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
-const char cVersionString[] = {'1','.','0','.','0','.','9'};
+const char cVersionString[] = {'1','.','0','.','0','.','1','0'};
 
 void handle_commands_config_start(void);
 BYTE handle_config_command(char *pCommand);
@@ -334,24 +336,29 @@ BYTE command_verbose(char *pCommand)
 BYTE command_version(char *pCommand)
 {
 	char * p = pCommand;
+	BYTE i = 0;
 
 	if (1 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
-	// e.g. "?1.0.0.6*"
+	// e.g. "?1.0.0.10*"
 	_gainer.cReplyBuffer[0] = '?';
-	_gainer.cReplyBuffer[1] = cVersionString[0];
-	_gainer.cReplyBuffer[2] = cVersionString[1];
-	_gainer.cReplyBuffer[3] = cVersionString[2];
-	_gainer.cReplyBuffer[4] = cVersionString[3];
-	_gainer.cReplyBuffer[5] = cVersionString[4];
-	_gainer.cReplyBuffer[6] = cVersionString[5];
-	_gainer.cReplyBuffer[7] = cVersionString[6];
-	_gainer.cReplyBuffer[8] = '*';
 
-	return 9;
+#if 1
+	for (i = 0; i < sizeof(cVersionString); i++) {
+		_gainer.cReplyBuffer[1 + i] = cVersionString[i];
+	}
+#else
+	// I don't understand why this version won't work as expected...
+	memcpy(&_gainer.cReplyBuffer[1], (void *)cVersionString, sizeof(cVersionString));
+	i = 8;
+#endif
+
+	_gainer.cReplyBuffer[1 + i] = '*';
+
+	return (2 + sizeof(cVersionString));
 }
 
 const char cHexString[16] = "0123456789ABCDEF";
