@@ -91,6 +91,9 @@ typedef struct {
 	BOOL bContinuousAinRequested;
 	BYTE bContinuousAinMask;
 	BOOL bContinuousDinRequested;
+
+	char cLocalRxBuffer[128];
+	BYTE bCommandLength;
 } global_parameters;
 
 extern global_parameters _gainer;
