@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "gainer_common.h"
 
 #define A_GET_DIN_1() (PRT0DR&0x40)	// P0[6]
@@ -101,6 +103,7 @@ typedef struct {
 	BYTE bPgaReference;
 	BOOL bButtonWasOn;
 	BOOL bButtonIsOn;
+	BOOL bWaitingForADC;
 } config_a_parameters;
 
 config_a_parameters _a;
@@ -128,6 +131,8 @@ void Enter_Config_A(void)
 
 	_a.bButtonWasOn = FALSE;
 	_a.bButtonIsOn = FALSE;
+
+	_a.bWaitingForADC = FALSE;
 
 	switch (_gainer.bCurrentConfig) {
 		case CONFIG_2:
@@ -213,8 +218,8 @@ void Enter_Config_A(void)
 	}
 
 	// start UART
-//	UART_A_IntCntl(UART_A_ENABLE_RX_INT | UART_A_ENABLE_TX_INT);
-	UART_A_IntCntl(UART_A_ENABLE_RX_INT);
+	UART_A_IntCntl(UART_A_ENABLE_RX_INT | UART_A_ENABLE_TX_INT);
+//	UART_A_IntCntl(UART_A_ENABLE_RX_INT);
 	UART_A_Start(UART_A_PARITY_NONE);
 
 	// set drive mode of P2[6] (TxD) to 'Strong'
@@ -334,12 +339,26 @@ void handle_ain_event(void)
 {
 	BYTE i = 0;
 
-	AMUX4_A_1_InputSelect(_a.bAdcChannelNumber);	// ain 1~4
-	AMUX4_A_2_InputSelect(_a.bAdcChannelNumber);	// ain 5~8
-	
-	DUALADC_A_GetSamples(1);	// continuous sampling
-	while(DUALADC_A_fIsDataAvailable() == 0);  // Wait for data to be ready
-	_a.wAdcValue[_a.bAdcChannelNumber] = DUALADC_A_iGetData1ClearFlag();		// ain 1~4
+	if (!_a.bWaitingForADC) {	
+		AMUX4_A_1_InputSelect(_a.bAdcChannelNumber);	// ain 1~4
+		AMUX4_A_2_InputSelect(_a.bAdcChannelNumber);	// ain 5~8
+		DUALADC_A_GetSamples(1);	// get one sample
+		_a.bWaitingForADC = TRUE;	// set the flag to let CPU do other tasks
+									// DO NOT KEEP WAITING HERE!!
+		return;
+	} else {
+		// it seems that we are waiting for a data is available
+		if (DUALADC_A_fIsDataAvailable() == 0) {
+			// it seems that a data is not available
+			return;
+		} else {
+			// it seems that a data is available
+			// clear the flag and let's process the data
+			_a.bWaitingForADC = FALSE;
+		}
+	}
+
+	_a.wAdcValue[_a.bAdcChannelNumber] = DUALADC_A_iGetData1();					// ain 1~4
 	_a.wAdcValue[_a.bAdcChannelNumber + 4] = DUALADC_A_iGetData2ClearFlag();	// ain 5~8
 
 	_a.bAdcChannelNumber++;
@@ -397,60 +416,66 @@ void handle_button_event(void)
 
 void handle_commands_config_a(void)
 {
-	char * pCommand;						// Parameter pointer
+	char * pCommand;		// Parameter pointer
 	BYTE bNumBytes = 0;
+	BYTE bErr = 0;
 
 	// reset Rx buffer if it seems to be broken
-	if (UART_A_bErrCheck()) {
+	if (bErr = UART_A_bErrCheck()) {
 		UART_A_CmdReset();
 		return;
 	}
 
 	if (UART_A_bCmdCheck()) {				// Wait for command    
-		if(pCommand = UART_A_szGetParam()) {
-			switch (*pCommand) {
+		if (pCommand = UART_A_szGetParam()) {
+			// copy the command to the local Rx buffer and reset the command buffer ASAP
+			_gainer.bCommandLength = UART_A_bCmdLength();
+			memcpy(_gainer.cLocalRxBuffer, pCommand, _gainer.bCommandLength);
+			UART_A_CmdReset();
+
+			switch (*_gainer.cLocalRxBuffer) {
 				case 'D':	// set all digital outputs (Dxx)
-					bNumBytes = command_set_dout_all(pCommand);
+					bNumBytes = command_set_dout_all(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'H':	// set the digital output high (Hn)
-					bNumBytes = command_set_dout_h(pCommand);
+					bNumBytes = command_set_dout_h(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'L':	// set the digital output low (Ln)
-					bNumBytes = command_set_dout_l(pCommand);
+					bNumBytes = command_set_dout_l(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'R':	// get all digital inputs (R)
-					bNumBytes = command_get_din_all(pCommand, FALSE);
+					bNumBytes = command_get_din_all(_gainer.cLocalRxBuffer, FALSE);
 					break;
 				
 				case 'r':	// get all digital inputs (continuous) (r)
-					bNumBytes = command_get_din_all(pCommand, TRUE);
+					bNumBytes = command_get_din_all(_gainer.cLocalRxBuffer, TRUE);
 					break;
 				
 				case 'A':	// set all analog outputs (Axx...xx)
-					bNumBytes = command_set_aout_all(pCommand);
+					bNumBytes = command_set_aout_all(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'a':	// set the analog output (anxx)
-					bNumBytes = command_set_aout_ch(pCommand);
+					bNumBytes = command_set_aout_ch(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'I':	// get all analog inputs (I)
-					bNumBytes = command_get_ain_all(pCommand, FALSE);
+					bNumBytes = command_get_ain_all(_gainer.cLocalRxBuffer, FALSE);
 					break;
 				
 				case 'i':	// get all analog inputs (continuous) (i)
-					bNumBytes = command_get_ain_all(pCommand, TRUE);
+					bNumBytes = command_get_ain_all(_gainer.cLocalRxBuffer, TRUE);
 					break;
 				
 				case 'S':	// get the analog input (Sn)
-					bNumBytes = command_get_ain_ch(pCommand, FALSE);
+					bNumBytes = command_get_ain_ch(_gainer.cLocalRxBuffer, FALSE);
 					break;
 				
 				case 's':	// get the analog input (continuous) (sn)
-					bNumBytes = command_get_ain_ch(pCommand, TRUE);
+					bNumBytes = command_get_ain_ch(_gainer.cLocalRxBuffer, TRUE);
 					break;
 				
 				case 'E':	// stop continuous sampling
@@ -466,7 +491,7 @@ void handle_commands_config_a(void)
 					break;
 				
 				case 'G':	// set gain and reference (Gxx)
-					bNumBytes = command_set_gain(pCommand);
+					bNumBytes = command_set_gain(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'Q':	// reboot (Q)
@@ -485,8 +510,6 @@ void handle_commands_config_a(void)
 		if (bNumBytes > 0) {
 			UART_A_Write(_gainer.cReplyBuffer, bNumBytes);
 		}
-
-		UART_A_CmdReset();					// Reset command buffer
 	}
 }
 
@@ -495,7 +518,7 @@ BYTE command_set_dout_all(char *pCommand)
 	BYTE i = 0;
 	WORD value = 0;
 
-	if (5 != UART_A_bCmdLength()) {
+	if (5 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -528,7 +551,7 @@ BYTE command_set_dout_h(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (2 != UART_A_bCmdLength()) {
+	if (2 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -561,7 +584,7 @@ BYTE command_set_dout_l(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (2 != UART_A_bCmdLength()) {
+	if (2 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -615,7 +638,7 @@ BYTE command_set_aout_all(char *pCommand)
 	}
 
 	// should change 0 or 8 channel condition
-	if (commandLength != UART_A_bCmdLength()) {
+	if (commandLength != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -643,7 +666,7 @@ BYTE command_set_aout_ch(char *pCommand)
 	BYTE channel = 0;
 	BYTE value = 0;
 
-	if (4 != UART_A_bCmdLength()) {
+	if (4 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -678,7 +701,7 @@ BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
 {
 	BYTE value = 0x00;
 
-	if (1 != UART_A_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -725,7 +748,7 @@ BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 {
 	BYTE i = 0;
 
-	if (1 != UART_A_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -750,7 +773,7 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 	BYTE channel = 0;
 	BYTE value = 0;
 
-	if (2 != UART_A_bCmdLength()) {
+	if (2 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -782,7 +805,7 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 
 BYTE command_stop_cont(void)
 {
-	if (1 != UART_A_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -798,7 +821,10 @@ BYTE command_stop_cont(void)
 
 BYTE command_set_led_h(void)
 {
-	if (1 != UART_A_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
+#if 0
+UART_A_PutSHexByte(_gainer.bCommandLength);
+#endif
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -817,7 +843,10 @@ BYTE command_set_led_h(void)
 
 BYTE command_set_led_l(void)
 {
-	if (1 != UART_A_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
+#if 0
+UART_A_PutSHexByte(_gainer.bCommandLength);
+#endif
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -839,7 +868,7 @@ BYTE command_set_gain(char *pCommand)
 	BYTE gain = HEX_TO_BYTE(*(pCommand + 1));
 	BYTE reference = HEX_TO_BYTE(*(pCommand + 2));
 
-	if (3 != UART_A_bCmdLength()) {
+	if (3 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -889,7 +918,7 @@ BYTE command_set_gain(char *pCommand)
 
 BYTE command_reboot_a(void)
 {
-	if (1 != UART_A_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
