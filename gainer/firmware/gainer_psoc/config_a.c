@@ -54,6 +54,7 @@ BYTE command_stop_cont(void);
 BYTE command_set_led_h(void);
 BYTE command_set_led_l(void);
 BYTE command_set_gain(char *pCommand);
+BYTE command_set_mode(char *pCommand);
 
 BYTE command_reboot_a(void);
 
@@ -104,6 +105,7 @@ typedef struct {
 	BOOL bButtonWasOn;
 	BOOL bButtonIsOn;
 	BOOL bWaitingForADC;
+	BOOL bScanFirstChannelOnly;
 } config_a_parameters;
 
 config_a_parameters _a;
@@ -120,7 +122,7 @@ void Enter_Config_A(void)
 	_gainer.bContinuousAinMask = 0x00;
 	_gainer.bContinuousDinRequested = FALSE;
 
-	_a.bAdcChannelNumber = 0;
+	_a.bAdcChannelNumber = AMUX4_A_1_PORT0_0;	// i.e. ain 3
 
 	for (i = 0; i < _gainer.bChannels_AIN; i++) {
 		_a.bAnalogInputMax[i] = 0x00;
@@ -133,6 +135,7 @@ void Enter_Config_A(void)
 	_a.bButtonIsOn = FALSE;
 
 	_a.bWaitingForADC = FALSE;
+	_a.bScanFirstChannelOnly = FALSE;
 
 	switch (_gainer.bCurrentConfig) {
 		case CONFIG_2:
@@ -340,8 +343,8 @@ void handle_ain_event(void)
 	BYTE i = 0;
 
 	if (!_a.bWaitingForADC) {	
-		AMUX4_A_1_InputSelect(_a.bAdcChannelNumber);	// ain 1~4
-		AMUX4_A_2_InputSelect(_a.bAdcChannelNumber);	// ain 5~8
+		AMUX4_A_1_InputSelect(_a.bAdcChannelNumber);	// ain 0~3
+		AMUX4_A_2_InputSelect(_a.bAdcChannelNumber);	// ain 4~7
 		DUALADC_A_GetSamples(1);	// get one sample
 		_a.bWaitingForADC = TRUE;	// set the flag to let CPU do other tasks
 									// DO NOT KEEP WAITING HERE!!
@@ -358,28 +361,33 @@ void handle_ain_event(void)
 		}
 	}
 
-	_a.wAdcValue[_a.bAdcChannelNumber] = DUALADC_A_iGetData1();					// ain 1~4
-	_a.wAdcValue[_a.bAdcChannelNumber + 4] = DUALADC_A_iGetData2ClearFlag();	// ain 5~8
+	_a.wAdcValue[_a.bAdcChannelNumber] = DUALADC_A_iGetData1();					// ain 0~3
+	_a.wAdcValue[_a.bAdcChannelNumber + 4] = DUALADC_A_iGetData2ClearFlag();	// ain 4~7
 
-	_a.bAdcChannelNumber++;
-	if (_a.bAdcChannelNumber == 4) {
-		_a.bAdcChannelNumber = 0;
+	if (_a.bScanFirstChannelOnly) {
+		_a.bAdcChannelNumber = AMUX4_A_1_PORT0_6;	// i.e. ain 0/4
 		_a.bAdcFlags |= 0x01;
+	} else {
+		_a.bAdcChannelNumber++;
+		if (_a.bAdcChannelNumber == 4) {
+			_a.bAdcChannelNumber = 0;
+			_a.bAdcFlags |= 0x01;
+		}
 	}
 
 	// Check if all the 4 channels have been measured
 	if (_a.bAdcFlags & 0x01) {
-		// ain 1~4
-		_a.bAnalogInput[3] = (BYTE)(_a.wAdcValue[0] & 0x00FF);
-		_a.bAnalogInput[2] = (BYTE)(_a.wAdcValue[1] & 0x00FF);
-		_a.bAnalogInput[1] = (BYTE)(_a.wAdcValue[2] & 0x00FF);
-		_a.bAnalogInput[0] = (BYTE)(_a.wAdcValue[3] & 0x00FF);
+		// ain 0~3
+		_a.bAnalogInput[3] = (BYTE)(_a.wAdcValue[0] & 0x00FF);	// PORT0[0]
+		_a.bAnalogInput[2] = (BYTE)(_a.wAdcValue[1] & 0x00FF);	// PORT0[2]
+		_a.bAnalogInput[1] = (BYTE)(_a.wAdcValue[2] & 0x00FF);	// PORT0[4]
+		_a.bAnalogInput[0] = (BYTE)(_a.wAdcValue[3] & 0x00FF);	// PORT0[6]
 
-		// ain 5~8
-		_a.bAnalogInput[7] = (BYTE)(_a.wAdcValue[4] & 0x00FF);
-		_a.bAnalogInput[6] = (BYTE)(_a.wAdcValue[5] & 0x00FF);
-		_a.bAnalogInput[5] = (BYTE)(_a.wAdcValue[6] & 0x00FF);
-		_a.bAnalogInput[4] = (BYTE)(_a.wAdcValue[7] & 0x00FF);
+		// ain 4~7
+		_a.bAnalogInput[7] = (BYTE)(_a.wAdcValue[4] & 0x00FF);	// PORT0[1]
+		_a.bAnalogInput[6] = (BYTE)(_a.wAdcValue[5] & 0x00FF);	// PORT0[3]
+		_a.bAnalogInput[5] = (BYTE)(_a.wAdcValue[6] & 0x00FF);	// PORT0[5]
+		_a.bAnalogInput[4] = (BYTE)(_a.wAdcValue[7] & 0x00FF);	// PORT0[7]
 
 		_a.bAdcFlags &= ~0x01;
 
@@ -418,10 +426,9 @@ void handle_commands_config_a(void)
 {
 	char * pCommand;		// Parameter pointer
 	BYTE bNumBytes = 0;
-	BYTE bErr = 0;
 
 	// reset Rx buffer if it seems to be broken
-	if (bErr = UART_A_bErrCheck()) {
+	if (UART_A_bErrCheck()) {
 		UART_A_CmdReset();
 		return;
 	}
@@ -494,6 +501,10 @@ void handle_commands_config_a(void)
 					bNumBytes = command_set_gain(_gainer.cLocalRxBuffer);
 					break;
 				
+				case 'M':	// set sampling mode (Mx)
+					bNumBytes = command_set_mode(_gainer.cLocalRxBuffer);
+					break;
+
 				case 'Q':	// reboot (Q)
 					bNumBytes = command_reboot_a();
 					break;
@@ -822,9 +833,6 @@ BYTE command_stop_cont(void)
 BYTE command_set_led_h(void)
 {
 	if (1 != _gainer.bCommandLength) {
-#if 0
-UART_A_PutSHexByte(_gainer.bCommandLength);
-#endif
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -844,9 +852,6 @@ UART_A_PutSHexByte(_gainer.bCommandLength);
 BYTE command_set_led_l(void)
 {
 	if (1 != _gainer.bCommandLength) {
-#if 0
-UART_A_PutSHexByte(_gainer.bCommandLength);
-#endif
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -916,6 +921,33 @@ BYTE command_set_gain(char *pCommand)
 	return 4;
 }
 
+BYTE command_set_mode(char *pCommand)
+{
+	if (2 != _gainer.bCommandLength) {
+		PutErrorStringToReplyBuffer();
+		return 2;
+	}
+
+	switch (*(pCommand + 1)) {
+		case '0':
+			_a.bScanFirstChannelOnly = FALSE;
+			break;
+
+		case '1':
+			_a.bScanFirstChannelOnly = TRUE;
+			break;
+
+		default:
+			break;
+	}
+
+	_gainer.cReplyBuffer[0] = 'M';
+	_gainer.cReplyBuffer[1] = *(pCommand + 1);
+	_gainer.cReplyBuffer[2] = '*';
+
+	return 3;
+}
+
 BYTE command_reboot_a(void)
 {
 	if (1 != _gainer.bCommandLength) {
@@ -975,6 +1007,7 @@ BOOL set_aout(BYTE channel, BYTE value)
 
 BOOL set_dout(BYTE channel, WORD value)
 {
+#if 0
 	switch (_gainer.bChannels_DOUT) {
 		case 4:
 			switch (channel) {
@@ -1003,6 +1036,24 @@ BOOL set_dout(BYTE channel, WORD value)
 		default:
 			break;
 	}
+#else
+	// TO REDUCE CODE SIZE
+	if (channel > (_gainer.bChannels_DOUT - 1)) {
+		return FALSE;
+	}
+
+	switch (channel) {
+		case 0: if (value) A_SET_DOUT_5_H(); else A_SET_DOUT_5_L(); break;		
+		case 1: if (value) A_SET_DOUT_6_H(); else A_SET_DOUT_6_L(); break;
+		case 2: if (value) A_SET_DOUT_7_H(); else A_SET_DOUT_7_L(); break;
+		case 3: if (value) A_SET_DOUT_8_H(); else A_SET_DOUT_8_L(); break;
+		case 4: if (value) A_SET_DOUT_1_H(); else A_SET_DOUT_1_L(); break;
+		case 5: if (value) A_SET_DOUT_2_H(); else A_SET_DOUT_2_L(); break;
+		case 6: if (value) A_SET_DOUT_3_H(); else A_SET_DOUT_3_L(); break;
+		case 7: if (value) A_SET_DOUT_4_H(); else A_SET_DOUT_4_L(); break;
+		default: break;
+	}
+#endif
 
 	return TRUE;
 }
@@ -1061,6 +1112,7 @@ void send_din_values(void)
 		return;
 	}
 
+#if 0
 	switch (_gainer.bChannels_DIN) {
 		case 4:
 			value += A_GET_DIN_1() ? 0x01 : 0x00;
@@ -1083,6 +1135,20 @@ void send_din_values(void)
 		default:
 			break;
 	}
+#else
+	// TO REDUCE CODE SIZE
+	value += A_GET_DIN_1() ? 0x01 : 0x00;
+	value += A_GET_DIN_2() ? 0x02 : 0x00;
+	value += A_GET_DIN_3() ? 0x04 : 0x00;
+	value += A_GET_DIN_4() ? 0x08 : 0x00;
+
+	if (8 == _gainer.bChannels_DIN) {
+		value += A_GET_DIN_5() ? 0x01 : 0x00;
+		value += A_GET_DIN_6() ? 0x02 : 0x00;
+		value += A_GET_DIN_7() ? 0x04 : 0x00;
+		value += A_GET_DIN_8() ? 0x08 : 0x00;
+	}
+#endif
 
 	_gainer.cReplyBuffer[0] = 'r';
 	ByteToHex(0x00, &_gainer.cReplyBuffer[1]);	// 'x', 'x'
