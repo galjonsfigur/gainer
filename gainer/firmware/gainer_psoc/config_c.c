@@ -61,7 +61,9 @@ void Counter8_C_Service_ISR(void)
 			PRS8_C_6_WriteSeed(_c.bData[_c.bCurrentScanLine][6]);
 			PRS8_C_7_WriteSeed(_c.bData[_c.bCurrentScanLine][7]);
 			break;
-
+#if 0
+		// WE DON'T CARE ABOUT COMMON ANODE TYPE
+		// PLEASE ROTATE YOUR MATRIX LED :P
 		case COMMON_A_TYPE:
 			// O: COL (X)
 			// I: ROW (Y) (i.e. row is scan line)
@@ -74,7 +76,7 @@ void Counter8_C_Service_ISR(void)
 			PRS8_C_6_WriteSeed(_c.bData[6][_c.bCurrentScanLine]);
 			PRS8_C_7_WriteSeed(_c.bData[7][_c.bCurrentScanLine]);
 			break;
-
+#endif
 		default:
 			break;
 	}
