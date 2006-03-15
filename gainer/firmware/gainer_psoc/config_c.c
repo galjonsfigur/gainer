@@ -244,8 +244,7 @@ void config_c_handle_commands(void)
 
 				default:
 					// seems to be an invalid command
-					_gainer.cReplyBuffer[0] = '!';
-					_gainer.cReplyBuffer[1] = '*';
+					PutErrorStringToReplyBuffer();
 					bNumBytes = 2;
 					break;
 			}
