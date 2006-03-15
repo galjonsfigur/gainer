@@ -14,7 +14,7 @@ global_parameters _gainer;
  * private functions of CONFIG_START
  */
 const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
-const char cVersionString[] = {'1','.','0','.','0','.','1','1'};
+const char cVersionString[] = {'1','.','0','.','0','.','1','2'};
 
 void handle_commands_config_start(void);
 BYTE handle_config_command(char *pCommand);
