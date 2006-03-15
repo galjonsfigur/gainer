@@ -184,34 +184,6 @@ void Enter_Config_A(void)
 			PRT2GS |= 0x01;		// connect P2[0] to global bus
 			break;
 
-#if 0	// ***** UNUSED *****
-		case CONFIG_3:
-			// consigure number of each port type
-			bChannels_AIN = 0;
-			bChannels_DIN = 8;
-			bChannels_AOUT = 4;
-			bChannels_DOUT = 4;
-
-			// change drive mode of *in 1~8 to 'Pull Down' (DM[2:0] = '000')
-			PRT0DM2 = 0x00;
-			PRT0DM1 = 0x00;
-			PRT0DM0 = 0x00;
-			// change select of *in 1~8 to 'StdCPU'
-			// <nothing to do!?>
-			break;
-
-		case CONFIG_5:
-			// consigure number of each port type
-			bChannels_AIN = 4;
-			bChannels_DIN = 4;
-			bChannels_AOUT = 0;
-			bChannels_DOUT = 8;
-
-			// disconnect PWM8 modules from *out 1~4
-			// disable global select (disable global bypass)
-			PRT2GS &= 0x55;		// disconnect P2[1], P2[3], P2[5] and P2[7] from global bus
-			break;
-#endif	// ***** UNUSED *****
 		default:
 			_gainer.bChannels_AIN = 4;
 			_gainer.bChannels_DIN = 4;
@@ -511,8 +483,7 @@ void handle_commands_config_a(void)
 				
 				default:
 					// seems to be an invalid command
-					_gainer.cReplyBuffer[0] = '!';
-					_gainer.cReplyBuffer[1] = '*';
+					PutErrorStringToReplyBuffer();
 					bNumBytes = 2;
 					break;
 			}
@@ -635,17 +606,10 @@ BYTE command_set_aout_all(char *pCommand)
 		return 2;
 	}
 
-	switch (_gainer.bChannels_AOUT) {
-		case 4:
-			commandLength = 9;
-			break;
-
-		case 8:
-			commandLength = 17;
-			break;
-
-		default:
-			break;
+	if (4 == _gainer.bChannels_AOUT) {
+		commandLength = 9;
+	} else if (8 == _gainer.bChannels_AOUT) {
+		commandLength = 17;
 	}
 
 	// should change 0 or 8 channel condition
@@ -724,27 +688,11 @@ BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
 
 	_gainer.bContinuousDinRequested = bContinuous;
 
-	switch (_gainer.bChannels_DIN) {
-		case 4:
-			value += A_GET_DIN_1() ? 0x01 : 0x00;
-			value += A_GET_DIN_2() ? 0x02 : 0x00;
-			value += A_GET_DIN_3() ? 0x04 : 0x00;
-			value += A_GET_DIN_4() ? 0x08 : 0x00;
-			break;
-
-		case 8:
-			value += A_GET_DIN_5() ? 0x01 : 0x00;
-			value += A_GET_DIN_6() ? 0x02 : 0x00;
-			value += A_GET_DIN_7() ? 0x04 : 0x00;
-			value += A_GET_DIN_8() ? 0x08 : 0x00;	
-			value += A_GET_DIN_1() ? 0x10 : 0x00;
-			value += A_GET_DIN_2() ? 0x20 : 0x00;
-			value += A_GET_DIN_3() ? 0x40 : 0x00;
-			value += A_GET_DIN_4() ? 0x80 : 0x00;
-		break;
-
-		default:
-			break;
+	if (4 == _gainer.bChannels_DIN) {
+		value += A_GET_DIN_1() ? 0x01 : 0x00;
+		value += A_GET_DIN_2() ? 0x02 : 0x00;
+		value += A_GET_DIN_3() ? 0x04 : 0x00;
+		value += A_GET_DIN_4() ? 0x08 : 0x00;
 	}
 
 	_gainer.cReplyBuffer[0] = *pCommand;
@@ -896,21 +844,14 @@ BYTE command_set_gain(char *pCommand)
 	PGA_A_2_SetGain(bGainTable[gain]);
 
 	// see TRM v.1.22, 13.2.37
-	switch (reference) {
-		case 0:	// VSS (10b)
-			PGA_A_1_GAIN_CR0 = (PGA_A_1_GAIN_CR0 & 0xFC) | 0x02;
-			PGA_A_2_GAIN_CR0 = (PGA_A_2_GAIN_CR0 & 0xFC) | 0x02;
-			_a.bPgaReference = PGA_REFERENCE_VSS;
-			break;
-
-		case 1:	// AGND (01b)
-			PGA_A_1_GAIN_CR0 = (PGA_A_1_GAIN_CR0 & 0xFC) | 0x01;
-			PGA_A_2_GAIN_CR0 = (PGA_A_2_GAIN_CR0 & 0xFC) | 0x01;
-			_a.bPgaReference = PGA_REFERENCE_AGND;
-			break;
-
-		default:
-			break;
+	if (0 == reference) {	// VSS (10b)
+		PGA_A_1_GAIN_CR0 = (PGA_A_1_GAIN_CR0 & 0xFC) | 0x02;
+		PGA_A_2_GAIN_CR0 = (PGA_A_2_GAIN_CR0 & 0xFC) | 0x02;
+		_a.bPgaReference = PGA_REFERENCE_VSS;
+	} else if (1 == reference) {	// AGND (01b)
+		PGA_A_1_GAIN_CR0 = (PGA_A_1_GAIN_CR0 & 0xFC) | 0x01;
+		PGA_A_2_GAIN_CR0 = (PGA_A_2_GAIN_CR0 & 0xFC) | 0x01;
+		_a.bPgaReference = PGA_REFERENCE_AGND;
 	}
 
 	_gainer.cReplyBuffer[0] = 'G';
@@ -928,17 +869,10 @@ BYTE command_set_mode(char *pCommand)
 		return 2;
 	}
 
-	switch (*(pCommand + 1)) {
-		case '0':
-			_a.bScanFirstChannelOnly = FALSE;
-			break;
-
-		case '1':
-			_a.bScanFirstChannelOnly = TRUE;
-			break;
-
-		default:
-			break;
+	if ('0' == (*(pCommand + 1))) {
+		_a.bScanFirstChannelOnly = FALSE;
+	} else if ('1' == (*(pCommand + 1))) {
+		_a.bScanFirstChannelOnly = TRUE;
 	}
 
 	_gainer.cReplyBuffer[0] = 'M';
@@ -965,6 +899,7 @@ BYTE command_reboot_a(void)
 
 BOOL set_aout(BYTE channel, BYTE value)
 {
+#if 0
 	switch (channel) {
 		case 0:
 			PWM8_A_4_WritePulseWidth(value);
@@ -1001,59 +936,43 @@ BOOL set_aout(BYTE channel, BYTE value)
 		default:
 			break;
 	}
+#else
+	// NOTE: There should be some possibilities to optimize this implementation
+	if (0 == channel) {
+		PWM8_A_4_WritePulseWidth(value);
+	} else if (1 == channel) {
+		PWM8_A_3_WritePulseWidth(value);
+	} else if (2 == channel) {
+		PWM8_A_2_WritePulseWidth(value);
+	} else if (3 == channel) {
+		PWM8_A_1_WritePulseWidth(value);
+	} else if (4 == channel) {
+		PWM8_A_8_WritePulseWidth(value);
+	} else if (5 == channel) {
+		PWM8_A_7_WritePulseWidth(value);
+	} else if (6 == channel) {
+		PWM8_A_6_WritePulseWidth(value);
+	} else if (7 == channel) {
+		PWM8_A_5_WritePulseWidth(value);
+	}
+#endif
 
 	return TRUE;
 }
 
 BOOL set_dout(BYTE channel, WORD value)
 {
-#if 0
-	switch (_gainer.bChannels_DOUT) {
-		case 4:
-			switch (channel) {
-				case 0: if (value) A_SET_DOUT_1_H(); else A_SET_DOUT_1_L(); break;
-				case 1: if (value) A_SET_DOUT_2_H(); else A_SET_DOUT_2_L(); break;
-				case 2: if (value) A_SET_DOUT_3_H(); else A_SET_DOUT_3_L(); break;
-				case 3: if (value) A_SET_DOUT_4_H(); else A_SET_DOUT_4_L(); break;
-				default: break;
-			}
-			break;
-
-		case 8:
-			switch (channel) {
-				case 0: if (value) A_SET_DOUT_5_H(); else A_SET_DOUT_5_L(); break;		
-				case 1: if (value) A_SET_DOUT_6_H(); else A_SET_DOUT_6_L(); break;
-				case 2: if (value) A_SET_DOUT_7_H(); else A_SET_DOUT_7_L(); break;
-				case 3: if (value) A_SET_DOUT_8_H(); else A_SET_DOUT_8_L(); break;
-				case 4: if (value) A_SET_DOUT_1_H(); else A_SET_DOUT_1_L(); break;
-				case 5: if (value) A_SET_DOUT_2_H(); else A_SET_DOUT_2_L(); break;
-				case 6: if (value) A_SET_DOUT_3_H(); else A_SET_DOUT_3_L(); break;
-				case 7: if (value) A_SET_DOUT_4_H(); else A_SET_DOUT_4_L(); break;
-				default: break;
-			}
-			break;
-
-		default:
-			break;
+	if (4 == _gainer.bChannels_DOUT) {
+		if (0 == channel) {
+			if (value) A_SET_DOUT_1_H(); else A_SET_DOUT_1_L();
+		} else if (1 == channel) {
+			if (value) A_SET_DOUT_2_H(); else A_SET_DOUT_2_L();
+		} else if (2 == channel) {
+			if (value) A_SET_DOUT_3_H(); else A_SET_DOUT_3_L();
+		} else if (3 == channel) {
+			if (value) A_SET_DOUT_4_H(); else A_SET_DOUT_4_L();
+		}
 	}
-#else
-	// TO REDUCE CODE SIZE
-	if (channel > (_gainer.bChannels_DOUT - 1)) {
-		return FALSE;
-	}
-
-	switch (channel) {
-		case 0: if (value) A_SET_DOUT_5_H(); else A_SET_DOUT_5_L(); break;		
-		case 1: if (value) A_SET_DOUT_6_H(); else A_SET_DOUT_6_L(); break;
-		case 2: if (value) A_SET_DOUT_7_H(); else A_SET_DOUT_7_L(); break;
-		case 3: if (value) A_SET_DOUT_8_H(); else A_SET_DOUT_8_L(); break;
-		case 4: if (value) A_SET_DOUT_1_H(); else A_SET_DOUT_1_L(); break;
-		case 5: if (value) A_SET_DOUT_2_H(); else A_SET_DOUT_2_L(); break;
-		case 6: if (value) A_SET_DOUT_3_H(); else A_SET_DOUT_3_L(); break;
-		case 7: if (value) A_SET_DOUT_4_H(); else A_SET_DOUT_4_L(); break;
-		default: break;
-	}
-#endif
 
 	return TRUE;
 }
@@ -1112,43 +1031,12 @@ void send_din_values(void)
 		return;
 	}
 
-#if 0
-	switch (_gainer.bChannels_DIN) {
-		case 4:
-			value += A_GET_DIN_1() ? 0x01 : 0x00;
-			value += A_GET_DIN_2() ? 0x02 : 0x00;
-			value += A_GET_DIN_3() ? 0x04 : 0x00;
-			value += A_GET_DIN_4() ? 0x08 : 0x00;
-			break;
-
-		case 8:
-			value += A_GET_DIN_5() ? 0x01 : 0x00;
-			value += A_GET_DIN_6() ? 0x02 : 0x00;
-			value += A_GET_DIN_7() ? 0x04 : 0x00;
-			value += A_GET_DIN_8() ? 0x08 : 0x00;
-			value += A_GET_DIN_1() ? 0x10 : 0x00;
-			value += A_GET_DIN_2() ? 0x20 : 0x00;
-			value += A_GET_DIN_3() ? 0x40 : 0x00;
-			value += A_GET_DIN_4() ? 0x80 : 0x00;
-			break;
-
-		default:
-			break;
+	if (4 == _gainer.bChannels_DIN) {
+		value += A_GET_DIN_1() ? 0x01 : 0x00;
+		value += A_GET_DIN_2() ? 0x02 : 0x00;
+		value += A_GET_DIN_3() ? 0x04 : 0x00;
+		value += A_GET_DIN_4() ? 0x08 : 0x00;
 	}
-#else
-	// TO REDUCE CODE SIZE
-	value += A_GET_DIN_1() ? 0x01 : 0x00;
-	value += A_GET_DIN_2() ? 0x02 : 0x00;
-	value += A_GET_DIN_3() ? 0x04 : 0x00;
-	value += A_GET_DIN_4() ? 0x08 : 0x00;
-
-	if (8 == _gainer.bChannels_DIN) {
-		value += A_GET_DIN_5() ? 0x01 : 0x00;
-		value += A_GET_DIN_6() ? 0x02 : 0x00;
-		value += A_GET_DIN_7() ? 0x04 : 0x00;
-		value += A_GET_DIN_8() ? 0x08 : 0x00;
-	}
-#endif
 
 	_gainer.cReplyBuffer[0] = 'r';
 	ByteToHex(0x00, &_gainer.cReplyBuffer[1]);	// 'x', 'x'
