@@ -40,6 +40,7 @@ BYTE config_d_command_set_dout_all(char *pCommand);
 //BYTE config_d_command_set_dout_ch_h(char *pCommand);
 //BYTE config_d_command_set_dout_ch_l(char *pCommand);
 //BYTE config_d_command_stop_cont(void);
+BYTE config_d_command_set_sensitivity(char *pCommand);
 BYTE config_d_command_reboot(void);
 
 BOOL config_d_set_dout(BYTE channel, WORD value);
@@ -54,6 +55,7 @@ void config_d_send_din_values(BOOL bContinuous);
 typedef struct {
 	BYTE bCalibrationTimer[8];
 	WORD wThresholdLevel[8];
+	WORD wThresholdOffset[8];
 	WORD wCurrentLevel[8];
 	BYTE bTouched[8];
 	WORD wTempValue;
@@ -83,7 +85,7 @@ void Timer16_D_ISR(void)
 				_d.wThresholdLevel[_d.bInputNumber] = _d.wTempValue;
 		}
 	} else {
-		if (_d.wTempValue < _d.wThresholdLevel[_d.bInputNumber]) {
+		if ((_d.wTempValue + _d.wThresholdOffset[_d.bInputNumber]) < _d.wThresholdLevel[_d.bInputNumber]) {
 			_d.bTouched[_d.bInputNumber] = TRUE;
 		} else {
 			_d.bTouched[_d.bInputNumber] = FALSE;
@@ -123,6 +125,7 @@ void Enter_Config_D(void)
 	for (i = 0; i < 8; i++) {
 		_d.bCalibrationTimer[i] = CALIBRATION_COUNT;
 		_d.wThresholdLevel[i] = 0xFFFF;
+		_d.wThresholdOffset[i] = 0x0000;
 		_d.bTouched[i] = FALSE;
 	}
 	_d.bInputNumber = AMUX4_D_PORT0_1;
@@ -217,14 +220,17 @@ void config_d_handle_commands(void)
 					bNumBytes = config_d_command_stop_cont();
 					break;
 */				
+				case 'T':
+					bNumBytes = config_d_command_set_sensitivity(pCommand);
+					break;
+
 				case 'Q':	// reboot (Q)
 					bNumBytes = config_d_command_reboot();
 					break;
 
 				default:
 					// seems to be an invalid command
-					_gainer.cReplyBuffer[0] = '!';
-					_gainer.cReplyBuffer[1] = '*';
+					PutErrorStringToReplyBuffer();
 					bNumBytes = 2;
 					break;
 			}
@@ -255,10 +261,13 @@ BYTE config_d_command_get_din_all(char *pCommand, BOOL bContinuous)
 		return 2;
 	}
 
+#if 0
+	// Since the number of din is not configurable, we don't have to do checking.
 	if (_gainer.bChannels_DIN < 1) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
+#endif
 
 	_gainer.bContinuousDinRequested = bContinuous;
 
@@ -279,10 +288,13 @@ BYTE config_d_command_set_dout_all(char *pCommand)
 		return 2;
 	}
 
+#if 0
+	// Since the number of dout is not configurable, we don't have to do checking.
 	if (_gainer.bChannels_DOUT < 1) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
+#endif
 
 	value = HEX_TO_BYTE(*(pCommand + 1));
 	value = (value << 4) + HEX_TO_BYTE(*(pCommand + 2));
@@ -390,6 +402,26 @@ BYTE config_d_command_stop_cont(void)
 	return 2;
 }
 */
+BYTE config_d_command_set_sensitivity(char *pCommand)
+{
+	BYTE i = 0;
+
+	if (2 != UART_D_bCmdLength()) {
+		PutErrorStringToReplyBuffer();
+		return 2;
+	}
+
+	for (i = 0; i < 8; i++) {
+		_d.wThresholdOffset[i] = (WORD)HEX_TO_BYTE(*(pCommand + 1));
+	}
+
+	_gainer.cReplyBuffer[0] = 'T';
+	_gainer.cReplyBuffer[1] = *(pCommand + 1);
+	_gainer.cReplyBuffer[2] = '*';
+
+	return 3;
+}
+
 BYTE config_d_command_reboot(void)
 {
 	if (1 != UART_D_bCmdLength()) {
@@ -407,9 +439,12 @@ BYTE config_d_command_reboot(void)
 
 BOOL config_d_set_dout(BYTE channel, WORD value)
 {
+#if 0
+	// Since the number of dout is not configurable, we don't have to do checking.
 	if (_gainer.bChannels_DOUT < 1) {
 		return FALSE;
 	}
+#endif
 
 	switch (channel) {
 		case 0: if (value) D_SET_DOUT_0_H(); else D_SET_DOUT_0_L(); break;
@@ -434,9 +469,12 @@ void config_d_send_din_values(BOOL bContinuous)
 	BYTE value_h = 0x00;
 	BYTE value_l = 0x00;
 
+#if 0
+	// Since the number of din is not configurable, we don't have to do checking.
 	if (_gainer.bChannels_DIN < 1) {
 		return;
 	}
+#endif
 
 	value_l += D_GET_DIN_3() ? 0x80 : 0x00;
 	value_l += D_GET_DIN_2() ? 0x40 : 0x00;
