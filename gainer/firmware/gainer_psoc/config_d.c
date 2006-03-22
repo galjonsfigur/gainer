@@ -85,7 +85,7 @@ void Timer16_D_ISR(void)
 				_d.wThresholdLevel[_d.bInputNumber] = _d.wTempValue;
 		}
 	} else {
-		if ((_d.wTempValue + _d.wThresholdOffset[_d.bInputNumber]) < _d.wThresholdLevel[_d.bInputNumber]) {
+		if (_d.wTempValue < (_d.wThresholdLevel[_d.bInputNumber] + _d.wThresholdOffset[_d.bInputNumber])) {
 			_d.bTouched[_d.bInputNumber] = TRUE;
 		} else {
 			_d.bTouched[_d.bInputNumber] = FALSE;
@@ -412,7 +412,7 @@ BYTE config_d_command_set_sensitivity(char *pCommand)
 	}
 
 	for (i = 0; i < 8; i++) {
-		_d.wThresholdOffset[i] = (WORD)HEX_TO_BYTE(*(pCommand + 1));
+		_d.wThresholdOffset[i] = (WORD)(HEX_TO_BYTE(*(pCommand + 1)) * 1);
 	}
 
 	_gainer.cReplyBuffer[0] = 'T';
