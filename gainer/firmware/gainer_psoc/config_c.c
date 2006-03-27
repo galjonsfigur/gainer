@@ -175,15 +175,6 @@ void Enter_Config_C(void)
 	Counter8_C_Service_WritePeriod(31);	// 32000 / 32 = 1000Hz
 	Counter8_C_Service_EnableInt();
 	Counter8_C_Service_Start();
-
-	UART_C_IntCntl(UART_C_ENABLE_RX_INT);
-	UART_C_Start(UART_C_PARITY_NONE);
-
-	// set drive mode of P2[6] (TxD) to 'Strong'
-	// DM[2:0] = '001' (Strong)
-	PRT2DM2 &= ~0x40;
-	PRT2DM1 &= ~0x40;
-	PRT2DM0 |= 0x40;
 }
 
 void Exit_Config_C(void)
@@ -204,14 +195,6 @@ void Exit_Config_C(void)
 	PRS8_C_6_Stop();
 	PRS8_C_7_Stop();
 
-	UART_C_Stop();
-
-	// set drive mode of P2[6] (TxD) to 'High-Z Analog'
-	// DM[2:0] = '110' (High-Z Analog)
-	PRT2DM2 |= 0x40;
-	PRT2DM1 |= 0x40;
-	PRT2DM0 &= ~0x40;
-
 	UnloadConfig_config_c();
 }
 
@@ -226,13 +209,13 @@ void config_c_handle_commands(void)
 	BYTE bNumBytes = 0;
 
 	// reset Rx buffer if it seems to be broken
-	if (UART_C_bErrCheck()) {
-		UART_C_CmdReset();
+	if (UART_bErrCheck()) {
+		UART_CmdReset();
 		return;
 	}
 
-	if (UART_C_bCmdCheck()) {				// Wait for command    
-		if(pCommand = UART_C_szGetParam()) {
+	if (UART_bCmdCheck()) {				// Wait for command    
+		if(pCommand = UART_szGetParam()) {
 			switch (*pCommand) {
 				case 'a':	// set the analog output (anxx)
 					bNumBytes = config_c_command_set_aout_column(pCommand);
@@ -251,10 +234,10 @@ void config_c_handle_commands(void)
 		}
 
 		if (bNumBytes > 0) {
-			UART_C_Write(_gainer.cReplyBuffer, bNumBytes);
+			UART_Write(_gainer.cReplyBuffer, bNumBytes);
 		}
 
-		UART_C_CmdReset();					// Reset command buffer
+		UART_CmdReset();					// Reset command buffer
 	}
 }
 
@@ -265,7 +248,7 @@ BYTE config_c_command_set_aout_column(char *pCommand)
 	BYTE value = 0;
 
 	// {a}{n:0..8}{0:00..FF}...{7:00..FF} = {1} + {1} + {2 * 8} = 18 bytes
-	if (18 != UART_C_bCmdLength()) {
+	if (18 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -300,7 +283,7 @@ BYTE config_c_command_set_aout_column(char *pCommand)
 
 BYTE config_c_command_reboot(void)
 {
-	if (1 != UART_C_bCmdLength()) {
+	if (1 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}

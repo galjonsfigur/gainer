@@ -14,7 +14,7 @@ global_parameters _gainer;
  * private functions of CONFIG_START
  */
 const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
-const char cVersionString[] = {'1','.','0','.','0','.','1','2'};
+const char cVersionString[] = {'1','.','0','.','0','.','1','3'};
 
 void handle_commands_config_start(void);
 BYTE handle_config_command(char *pCommand);
@@ -116,20 +116,20 @@ void Enter_Config_Start()
 
 	init_global_parameters();
 
-	LoadConfig_gainer();
+	if (!IsgainerLoaded()) {
+		LoadConfig_gainer();
+	}
 
 	M8C_EnableGInt;
 
 	UART_IntCntl(UART_ENABLE_RX_INT);
 	UART_Start(UART_PARITY_NONE);
 
-	// set drive mode of P2[6] (TxD) to 'Strong'
+	// make sure to set drive mode of P2[6] (TxD) to 'Strong'
 	// DM[2:0] = '001' (Strong)
 	PRT2DM2 &= ~0x40;
 	PRT2DM1 &= ~0x40;
 	PRT2DM0 |= 0x40;
-
-///	UART_CPutString("!!!*");
 
 #if SERIAL_DEBUG_ENABLED
 	UART_CPutString("\r\nEnter_Config_Start()\r\n");
@@ -142,17 +142,9 @@ void Exit_Config_Start()
 	UART_CPutString("\r\nExit_Config_Start()\r\n");
 #endif
 
-	UART_Stop();
-
-	// set drive mode of P2[6] (TxD) to 'High-Z Analog'
-	// DM[2:0] = '110' (High-Z Analog)
-	PRT2DM2 |= 0x40;
-	PRT2DM1 |= 0x40;
-	PRT2DM0 &= ~0x40;
-
 	M8C_DisableGInt;
 
-	UnloadConfig_gainer();
+	// NOTE: Never unload config 'gainer'!!!
 }
 
 void Main_Config_Start()

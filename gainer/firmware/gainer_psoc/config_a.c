@@ -192,17 +192,6 @@ void Enter_Config_A(void)
 			break;
 	}
 
-	// start UART
-	UART_A_IntCntl(UART_A_ENABLE_RX_INT | UART_A_ENABLE_TX_INT);
-//	UART_A_IntCntl(UART_A_ENABLE_RX_INT);
-	UART_A_Start(UART_A_PARITY_NONE);
-
-	// set drive mode of P2[6] (TxD) to 'Strong'
-	// DM[2:0] = '001' (Strong)
-	PRT2DM2 &= ~0x40;
-	PRT2DM1 &= ~0x40;
-	PRT2DM0 |= 0x40;
-
 	// start analog inputs
 	AMUX4_A_1_Start();
 	AMUX4_A_2_Start();
@@ -272,15 +261,6 @@ void Exit_Config_A(void)
 	init_output_ports();
 
 	M8C_DisableGInt;
-
-	// stop UART
-	UART_A_Stop();
-
-	// set drive mode of P2[6] (TxD) to 'High-Z Analog'
-	// DM[2:0] = '110' (High-Z Analog)
-	PRT2DM2 |= 0x40;
-	PRT2DM1 |= 0x40;
-	PRT2DM0 &= ~0x40;
 
 	// stop analog inputs
 	AMUX4_A_1_Stop();
@@ -388,7 +368,7 @@ void handle_button_event(void)
 	if (_a.bButtonIsOn != _a.bButtonWasOn) {
 		_gainer.cReplyBuffer[0] = _a.bButtonIsOn ? 'N' : 'F';
 		_gainer.cReplyBuffer[1] = '*';
-		UART_A_Write(_gainer.cReplyBuffer, 2);
+		UART_Write(_gainer.cReplyBuffer, 2);
 	}
 
 	_a.bButtonWasOn = _a.bButtonIsOn;
@@ -400,17 +380,17 @@ void handle_commands_config_a(void)
 	BYTE bNumBytes = 0;
 
 	// reset Rx buffer if it seems to be broken
-	if (UART_A_bErrCheck()) {
-		UART_A_CmdReset();
+	if (UART_bErrCheck()) {
+		UART_CmdReset();
 		return;
 	}
 
-	if (UART_A_bCmdCheck()) {				// Wait for command    
-		if (pCommand = UART_A_szGetParam()) {
+	if (UART_bCmdCheck()) {				// Wait for command    
+		if (pCommand = UART_szGetParam()) {
 			// copy the command to the local Rx buffer and reset the command buffer ASAP
-			_gainer.bCommandLength = UART_A_bCmdLength();
+			_gainer.bCommandLength = UART_bCmdLength();
 			memcpy(_gainer.cLocalRxBuffer, pCommand, _gainer.bCommandLength);
-			UART_A_CmdReset();
+			UART_CmdReset();
 
 			switch (*_gainer.cLocalRxBuffer) {
 				case 'D':	// set all digital outputs (Dxx)
@@ -490,7 +470,7 @@ void handle_commands_config_a(void)
 		}
 
 		if (bNumBytes > 0) {
-			UART_A_Write(_gainer.cReplyBuffer, bNumBytes);
+			UART_Write(_gainer.cReplyBuffer, bNumBytes);
 		}
 	}
 }
@@ -1019,7 +999,7 @@ void send_ain_values(void)
 		length = 4;
 	}
 
-	UART_A_Write(_gainer.cReplyBuffer, length);
+	UART_Write(_gainer.cReplyBuffer, length);
 }
 
 void send_din_values(void)
@@ -1044,7 +1024,7 @@ void send_din_values(void)
 	_gainer.cReplyBuffer[5] = '*';
 	length = 6;
 
-	UART_A_Write(_gainer.cReplyBuffer, length);
+	UART_Write(_gainer.cReplyBuffer, length);
 }
 
 void init_output_ports(void)

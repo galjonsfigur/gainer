@@ -155,16 +155,9 @@ void Enter_Config_B(void)
 	LoadConfig_config_b();
 
 	M8C_EnableGInt;
-	UART_B_IntCntl(UART_B_ENABLE_RX_INT);
-	UART_B_Start(UART_B_PARITY_NONE);
+
 	Counter8_B_Din_EnableInt();
 	Counter8_B_Din_Start();
-
-	// set drive mode of P2[6] (TxD) to 'Strong'
-	// DM[2:0] = '001' (Strong)
-	PRT2DM2 &= ~0x40;
-	PRT2DM1 &= ~0x40;
-	PRT2DM0 |= 0x40;
 
 	config_b_init_output_ports();
 }
@@ -177,14 +170,6 @@ void Exit_Config_B(void)
 	Counter8_B_Din_Stop();
 
 	M8C_DisableGInt;
-
-	UART_B_Stop();
-
-	// set drive mode of P2[6] (TxD) to 'High-Z Analog'
-	// DM[2:0] = '110' (High-Z Analog)
-	PRT2DM2 |= 0x40;
-	PRT2DM1 |= 0x40;
-	PRT2DM0 &= ~0x40;
 
 	UnloadConfig_config_b();
 }
@@ -205,13 +190,13 @@ void config_b_handle_commands(void)
 	BYTE bNumBytes = 0;
 
 	// reset Rx buffer if it seems to be broken
-	if (UART_B_bErrCheck()) {
-		UART_B_CmdReset();
+	if (UART_bErrCheck()) {
+		UART_CmdReset();
 		return;
 	}
 
-	if (UART_B_bCmdCheck()) {				// Wait for command    
-		if(pCommand = UART_B_szGetParam()) {
+	if (UART_bCmdCheck()) {				// Wait for command    
+		if(pCommand = UART_szGetParam()) {
 			switch (*pCommand) {
 				case 'R':	// get all digital inputs (R)
 					bNumBytes = config_b_command_get_din_all(pCommand, FALSE);
@@ -250,16 +235,16 @@ void config_b_handle_commands(void)
 		}
 
 		if (bNumBytes > 0) {
-			UART_B_Write(_gainer.cReplyBuffer, bNumBytes);
+			UART_Write(_gainer.cReplyBuffer, bNumBytes);
 		}
 
-		UART_B_CmdReset();					// Reset command buffer
+		UART_CmdReset();					// Reset command buffer
 	}
 }
 
 BYTE config_b_command_get_din_all(char *pCommand, BOOL bContinuous)
 {
-	if (1 != UART_B_bCmdLength()) {
+	if (1 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -283,7 +268,7 @@ BYTE config_b_command_set_dout_all(char *pCommand)
 	BYTE i = 0;
 	WORD value = 0;
 
-	if (5 != UART_B_bCmdLength()) {
+	if (5 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -321,7 +306,7 @@ BYTE config_b_command_set_dout_ch_h(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (2 != UART_B_bCmdLength()) {
+	if (2 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -354,7 +339,7 @@ BYTE config_b_command_set_dout_ch_l(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (2 != UART_B_bCmdLength()) {
+	if (2 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -385,7 +370,7 @@ BYTE config_b_command_set_dout_ch_l(char *pCommand)
 
 BYTE config_b_command_stop_cont(void)
 {
-	if (1 != UART_B_bCmdLength()) {
+	if (1 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -401,7 +386,7 @@ BYTE config_b_command_stop_cont(void)
 
 BYTE config_b_command_reboot(void)
 {
-	if (1 != UART_B_bCmdLength()) {
+	if (1 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -483,7 +468,7 @@ void config_b_send_din_values(BOOL bContinuous)
 	_gainer.cReplyBuffer[5] = '*';
 	length = 6;
 
-	UART_B_Write(_gainer.cReplyBuffer, length);
+	UART_Write(_gainer.cReplyBuffer, length);
 }
 
 void config_b_init_output_ports(void)

@@ -138,16 +138,7 @@ void Enter_Config_D(void)
 	Timer16_D_Start();
 	Timer16_D_EnableInt();
 
-	UART_D_IntCntl(UART_D_ENABLE_RX_INT);
-	UART_D_Start(UART_D_PARITY_NONE);
-
 	M8C_EnableGInt;
-
-	// set drive mode of P2[6] (TxD) to 'Strong'
-	// DM[2:0] = '001' (Strong)
-	PRT2DM2 &= ~0x40;
-	PRT2DM1 &= ~0x40;
-	PRT2DM0 |= 0x40;
 }
 
 void Exit_Config_D(void)
@@ -159,14 +150,6 @@ void Exit_Config_D(void)
 	Timer8_D_Stop();
 	Timer16_D_DisableInt();
 	Timer16_D_Stop();
-
-	UART_D_Stop();
-
-	// set drive mode of P2[6] (TxD) to 'High-Z Analog'
-	// DM[2:0] = '110' (High-Z Analog)
-	PRT2DM2 |= 0x40;
-	PRT2DM1 |= 0x40;
-	PRT2DM0 &= ~0x40;
 
 #if 0
 	// When backed to configuration 0, Rx side of UART won't work
@@ -188,13 +171,13 @@ void config_d_handle_commands(void)
 	BYTE bNumBytes = 0;
 
 	// reset Rx buffer if it seems to be broken
-	if (UART_D_bErrCheck()) {
-		UART_D_CmdReset();
+	if (UART_bErrCheck()) {
+		UART_CmdReset();
 		return;
 	}
 
-	if (UART_D_bCmdCheck()) {				// Wait for command    
-		if(pCommand = UART_D_szGetParam()) {
+	if (UART_bCmdCheck()) {				// Wait for command    
+		if(pCommand = UART_szGetParam()) {
 			switch (*pCommand) {
 				case 'R':	// get all digital inputs (R)
 					bNumBytes = config_d_command_get_din_all(pCommand, FALSE);
@@ -237,26 +220,26 @@ void config_d_handle_commands(void)
 		}
 
 		if (bNumBytes > 0) {
-			UART_D_Write(_gainer.cReplyBuffer, bNumBytes);
+			UART_Write(_gainer.cReplyBuffer, bNumBytes);
 		}
 
-		UART_D_CmdReset();					// Reset command buffer
+		UART_CmdReset();					// Reset command buffer
 	}
 }
 
 BYTE config_d_command_get_din_all(char *pCommand, BOOL bContinuous)
 {
 #if 0
-	UART_D_CPutString("CIN0:");
-	UART_D_PutSHexInt(_d.wThresholdLevel[AMUX4_D_PORT0_7]);
-	UART_D_PutChar('(');
-	UART_D_PutSHexInt(_d.wCurrentLevel[AMUX4_D_PORT0_7]);
-	UART_D_PutChar(')');
-	UART_D_PutSHexByte(_d.bCalibrationTimer[AMUX4_D_PORT0_7]);
-	UART_D_PutChar(':');
+	UART_CPutString("CIN0:");
+	UART_PutSHexInt(_d.wThresholdLevel[AMUX4_D_PORT0_7]);
+	UART_PutChar('(');
+	UART_PutSHexInt(_d.wCurrentLevel[AMUX4_D_PORT0_7]);
+	UART_PutChar(')');
+	UART_PutSHexByte(_d.bCalibrationTimer[AMUX4_D_PORT0_7]);
+	UART_PutChar(':');
 #endif
 
-	if (1 != UART_D_bCmdLength()) {
+	if (1 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -283,7 +266,7 @@ BYTE config_d_command_set_dout_all(char *pCommand)
 	BYTE i = 0;
 	WORD value = 0;
 
-	if (5 != UART_D_bCmdLength()) {
+	if (5 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -324,7 +307,7 @@ BYTE config_d_command_set_dout_ch_h(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (2 != UART_D_bCmdLength()) {
+	if (2 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -357,7 +340,7 @@ BYTE config_d_command_set_dout_ch_l(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (2 != UART_D_bCmdLength()) {
+	if (2 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -388,7 +371,7 @@ BYTE config_d_command_set_dout_ch_l(char *pCommand)
 
 BYTE config_d_command_stop_cont(void)
 {
-	if (1 != UART_D_bCmdLength()) {
+	if (1 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -406,7 +389,7 @@ BYTE config_d_command_set_sensitivity(char *pCommand)
 {
 	BYTE i = 0;
 
-	if (2 != UART_D_bCmdLength()) {
+	if (2 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -424,7 +407,7 @@ BYTE config_d_command_set_sensitivity(char *pCommand)
 
 BYTE config_d_command_reboot(void)
 {
-	if (1 != UART_D_bCmdLength()) {
+	if (1 != UART_bCmdLength()) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -492,5 +475,5 @@ void config_d_send_din_values(BOOL bContinuous)
 	_gainer.cReplyBuffer[5] = '*';
 	length = 6;
 
-	UART_D_Write(_gainer.cReplyBuffer, length);
+	UART_Write(_gainer.cReplyBuffer, length);
 }
