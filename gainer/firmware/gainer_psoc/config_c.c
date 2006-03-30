@@ -92,6 +92,7 @@ void Enter_Config_C(void)
 	BYTE column, row;
 
 	_gainer.bCurrentConfig = _gainer.bRequestedConfig;
+	_gainer.pMainFunction = Main_Config_C;
 
 	_gainer.bContinuousAinRequested = FALSE;
 	_gainer.bContinuousAinMask = 0x00;

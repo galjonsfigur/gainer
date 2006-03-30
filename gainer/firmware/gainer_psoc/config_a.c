@@ -115,6 +115,7 @@ void Enter_Config_A(void)
 	BYTE i = 0;
 
 	_gainer.bCurrentConfig = _gainer.bRequestedConfig;
+	_gainer.pMainFunction = Main_Config_A;
 
 	LoadConfig_config_a();
 

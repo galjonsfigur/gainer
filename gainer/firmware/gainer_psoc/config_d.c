@@ -110,6 +110,7 @@ void Enter_Config_D(void)
 	BYTE i = 0;
 
 	_gainer.bCurrentConfig = _gainer.bRequestedConfig;
+	_gainer.pMainFunction = Main_Config_D;
 
 	_gainer.bContinuousAinRequested = FALSE;
 	_gainer.bContinuousAinMask = 0x00;

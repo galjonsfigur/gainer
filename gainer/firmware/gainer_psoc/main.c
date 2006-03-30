@@ -32,80 +32,17 @@ void main()
 	Enter_Config_Start();	// enter CONFIG_START
 
 	while (TRUE) {
-		switch (_gainer.bCurrentConfig) {
-			case CONFIG_START:
-				Main_Config_Start();
-				break;
-
-			case CONFIG_1:
-			case CONFIG_2:
-			case CONFIG_3:
-			case CONFIG_4:
-				Main_Config_A();
-				break;
-
-			case CONFIG_5:
-			case CONFIG_6:
-				Main_Config_B();
-				break;
-
-			case CONFIG_7:
-				Main_Config_C();
-				break;
-
-			case CONFIG_8:
-				Main_Config_D();
-				break;
-
-			default:
-				break;
+		while (!_gainer.bQuitRequested) {
+			_gainer.pMainFunction();
 		}
 
-		if (_gainer.bQuitRequested) {
-#if 1
-			// just change configuration
-			if (CONFIG_START == _gainer.bCurrentConfig) {
-				// We don't have to do reboot, so just clear the quit-requested flag.
-				_gainer.bQuitRequested = FALSE;
-			} else {
-				_gainer.bRequestedConfig = CONFIG_START;
-				change_configuration(_gainer.bCurrentConfig, _gainer.bRequestedConfig);
-			}
-#else
-			// do actual software reset
-			WaitForBriefSpells();
-
-			switch (_gainer.bCurrentConfig) {
-				case CONFIG_START:
-					Exit_Config_Start();
-					break;
-	
-				case CONFIG_1:
-				case CONFIG_2:
-				case CONFIG_3:
-				case CONFIG_4:
-					Exit_Config_A();
-					break;
-	
-				case CONFIG_5:
-				case CONFIG_6:
-					Exit_Config_B();
-					break;
-
-				case CONFIG_7:
-					Exit_Config_C();
-					break;
-
-				case CONFIG_8:
-					Exit_Config_D();
-					break;
-
-				default:
-					break;
-			}
-
-			M8C_Reset;
-#endif
+		// Change configuration if needed.
+		if (CONFIG_START == _gainer.bCurrentConfig) {
+			// We don't have to do reboot, so just clear the quit-requested flag.
+			_gainer.bQuitRequested = FALSE;
+		} else {
+			_gainer.bRequestedConfig = CONFIG_START;
+			change_configuration(_gainer.bCurrentConfig, _gainer.bRequestedConfig);
 		}
 	}
 }
@@ -113,9 +50,11 @@ void main()
 void Enter_Config_Start()
 {
 	_gainer.bCurrentConfig = CONFIG_START;
+	_gainer.pMainFunction = Main_Config_Start;
 
 	init_global_parameters();
 
+	// load the base configuration if not loaded
 	if (!IsgainerLoaded()) {
 		LoadConfig_gainer();
 	}
@@ -131,20 +70,15 @@ void Enter_Config_Start()
 	PRT2DM1 &= ~0x40;
 	PRT2DM0 |= 0x40;
 
-#if SERIAL_DEBUG_ENABLED
-	UART_CPutString("\r\nEnter_Config_Start()\r\n");
-#endif
+	// make sure to turn the LED off (for the first reboot after a firmware update)
+	SET_LED_L();
 }
 
 void Exit_Config_Start()
 {
-#if SERIAL_DEBUG_ENABLED
-	UART_CPutString("\r\nExit_Config_Start()\r\n");
-#endif
-
 	M8C_DisableGInt;
 
-	// NOTE: Never unload config 'gainer'!!!
+	// NOTE: Since the 'gainer' configuration is the base configuration, never unload it!!!
 }
 
 void Main_Config_Start()
@@ -391,8 +325,6 @@ void init_global_parameters(void)
 	_gainer.bContinuousAinMask = 0x0000;
 	_gainer.bContinuousDinRequested = FALSE;
 	_gainer.bQuitRequested = FALSE;
-//	_gainer.bCurrentConfig = CONFIG_START;
-//	_gainer.bRequestedConfig = CONFIG_START;
 	_gainer.bVerboseMode = TRUE;
 	_gainer.bChannels_AIN = 0;
 	_gainer.bChannels_AOUT = 0;

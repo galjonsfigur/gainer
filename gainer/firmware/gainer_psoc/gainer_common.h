@@ -5,8 +5,6 @@
 #include "PSoCAPI.h"    // PSoC API definitions for all User Modules
 #include "psocdynamic.h"
 
-#define SERIAL_DEBUG_ENABLED 0
-
 /**
  * common I/O Pin Definitions
  */
@@ -94,6 +92,7 @@ typedef struct {
 
 	char cLocalRxBuffer[128];
 	BYTE bCommandLength;
+	void (*pMainFunction)(void);
 } global_parameters;
 
 extern global_parameters _gainer;

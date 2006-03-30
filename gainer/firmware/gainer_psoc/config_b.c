@@ -98,6 +98,7 @@ void Counter8_B_Din_ISR(void)
 void Enter_Config_B(void)
 {
 	_gainer.bCurrentConfig = _gainer.bRequestedConfig;
+	_gainer.pMainFunction = Main_Config_B;
 
 	_gainer.bContinuousAinRequested = FALSE;
 	_gainer.bContinuousAinMask = 0x00;
