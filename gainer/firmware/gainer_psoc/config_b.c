@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "gainer_common.h"
 
 #define B_GET_DIN_01() (PRT0DR&0x80)	// P0[7]
@@ -198,25 +200,30 @@ void config_b_handle_commands(void)
 
 	if (UART_bCmdCheck()) {				// Wait for command    
 		if(pCommand = UART_szGetParam()) {
-			switch (*pCommand) {
+			// copy the command to the local Rx buffer and reset the command buffer ASAP
+			_gainer.bCommandLength = UART_bCmdLength();
+			memcpy(_gainer.cLocalRxBuffer, pCommand, _gainer.bCommandLength);
+			UART_CmdReset();
+
+			switch (*_gainer.cLocalRxBuffer) {
 				case 'R':	// get all digital inputs (R)
-					bNumBytes = config_b_command_get_din_all(pCommand, FALSE);
+					bNumBytes = config_b_command_get_din_all(_gainer.cLocalRxBuffer, FALSE);
 					break;
 				
 				case 'r':	// get all digital inputs (continuous) (r)
-					bNumBytes = config_b_command_get_din_all(pCommand, TRUE);
+					bNumBytes = config_b_command_get_din_all(_gainer.cLocalRxBuffer, TRUE);
 					break;
 
 				case 'D':	// set all digital outputs (Dxxxx)
-					bNumBytes = config_b_command_set_dout_all(pCommand);
+					bNumBytes = config_b_command_set_dout_all(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'H':	// set the digital output high (Hn)
-					bNumBytes = config_b_command_set_dout_ch_h(pCommand);
+					bNumBytes = config_b_command_set_dout_ch_h(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'L':	// set the digital output low (Ln)
-					bNumBytes = config_b_command_set_dout_ch_l(pCommand);
+					bNumBytes = config_b_command_set_dout_ch_l(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'E':	// stop continuous sampling
@@ -238,14 +245,12 @@ void config_b_handle_commands(void)
 		if (bNumBytes > 0) {
 			UART_Write(_gainer.cReplyBuffer, bNumBytes);
 		}
-
-		UART_CmdReset();					// Reset command buffer
 	}
 }
 
 BYTE config_b_command_get_din_all(char *pCommand, BOOL bContinuous)
 {
-	if (1 != UART_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -269,7 +274,7 @@ BYTE config_b_command_set_dout_all(char *pCommand)
 	BYTE i = 0;
 	WORD value = 0;
 
-	if (5 != UART_bCmdLength()) {
+	if (5 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -307,7 +312,7 @@ BYTE config_b_command_set_dout_ch_h(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (2 != UART_bCmdLength()) {
+	if (2 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -340,7 +345,7 @@ BYTE config_b_command_set_dout_ch_l(char *pCommand)
 {
 	BYTE channel = HEX_TO_BYTE(*(pCommand + 1));
 
-	if (2 != UART_bCmdLength()) {
+	if (2 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -371,7 +376,7 @@ BYTE config_b_command_set_dout_ch_l(char *pCommand)
 
 BYTE config_b_command_stop_cont(void)
 {
-	if (1 != UART_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -387,7 +392,7 @@ BYTE config_b_command_stop_cont(void)
 
 BYTE config_b_command_reboot(void)
 {
-	if (1 != UART_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}

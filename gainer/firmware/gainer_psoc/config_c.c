@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "gainer_common.h"
 
 /**
@@ -217,9 +219,14 @@ void config_c_handle_commands(void)
 
 	if (UART_bCmdCheck()) {				// Wait for command    
 		if(pCommand = UART_szGetParam()) {
-			switch (*pCommand) {
+			// copy the command to the local Rx buffer and reset the command buffer ASAP
+			_gainer.bCommandLength = UART_bCmdLength();
+			memcpy(_gainer.cLocalRxBuffer, pCommand, _gainer.bCommandLength);
+			UART_CmdReset();
+
+			switch (*_gainer.cLocalRxBuffer) {
 				case 'a':	// set the analog output (anxx)
-					bNumBytes = config_c_command_set_aout_column(pCommand);
+					bNumBytes = config_c_command_set_aout_column(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'Q':	// reboot (Q)
@@ -237,8 +244,6 @@ void config_c_handle_commands(void)
 		if (bNumBytes > 0) {
 			UART_Write(_gainer.cReplyBuffer, bNumBytes);
 		}
-
-		UART_CmdReset();					// Reset command buffer
 	}
 }
 
@@ -249,7 +254,7 @@ BYTE config_c_command_set_aout_column(char *pCommand)
 	BYTE value = 0;
 
 	// {a}{n:0..8}{0:00..FF}...{7:00..FF} = {1} + {1} + {2 * 8} = 18 bytes
-	if (18 != UART_bCmdLength()) {
+	if (18 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -284,7 +289,7 @@ BYTE config_c_command_set_aout_column(char *pCommand)
 
 BYTE config_c_command_reboot(void)
 {
-	if (1 != UART_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
