@@ -1,5 +1,18 @@
+2006-05-17    <saita@kinoshita>
+
+	* ガワだけ作った:
+	以下のファイルを追加
+	
+	GainerSerialWrapper.h
+	Serial.h
+	SerialWin.h
+	GainerSerialWrapper.cpp
+	main.cpp
+	SerialWin.cpp
+	
+
 2006-05-15    <saita@kinoshita>
 
-	* プロジェクト開始。
+	* プロジェクト開始。:
 	レポジトリにライセンスとChangeLogを投げ込んでおくだけ。
 
