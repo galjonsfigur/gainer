@@ -1,6 +1,6 @@
 Gainer Processing library
-version: 1-0-0-8
-date: 2006.02.25
+farm version: 1-0-0-14
+date: 2006.05.13
 
 
 Files
@@ -19,6 +19,10 @@ There are examples for Gainer library. You can copy contents into processing exa
 
 
 Revision History
+
+2006/05.13 (1-0-0-14)
+*change constracter on mac
+
 
 2006/02/25 (1-0-0-8)
 * first public beta release

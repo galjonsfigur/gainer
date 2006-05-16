@@ -3,7 +3,11 @@
  * @author PDP Project
  * @version 1.0
  */
- 
+
+/*
+ firmware updateの時
+1 firmVersionの文字を書き換える
+*/
 
 package processing.gainer;
 import processing.core.*;
@@ -29,6 +33,10 @@ public class Gainer implements SerialPortEventListener {
   private Digital digital;
   private Analog analog;
   
+  private boolean WINDOWS = true;
+  
+  public final String firmVersion = "1.0.0.14";
+  public String deviceVersion;
 
   private int currentMode = 0;
   public final static int MODE1 = 1;
@@ -37,8 +45,8 @@ public class Gainer implements SerialPortEventListener {
   public final static int MODE4 = 4;
   public final static int MODE5 = 5;
   public final static int MODE6 = 6;
-  //public final static int MODE7 = 7;
-  //public final static int MODE8 = 8;
+  public final static int MODE7 = 7;
+  public final static int MODE8 = 8;
 
   public final static boolean AGND = true;
   //public final static boolean V2_5 = true;
@@ -55,6 +63,7 @@ public class Gainer implements SerialPortEventListener {
   public int[] analogInput;
   public boolean[] digitalInput;
 
+	private static boolean verbose = true;
 
   private boolean analogSeq = false;
   private boolean digitalSeq = false;
@@ -73,39 +82,79 @@ public class Gainer implements SerialPortEventListener {
   int bufferSize = 1;  // how big before reset or event firing
 
   static private boolean DEBUG = false;
-  private static String dname = "COM1";
+  private static String dname = "COM3";
   private static int dmode = MODE1;
-  private static boolean dverbose = true;
+  
 
+
+	//名前を指定しない初期化
   public Gainer(PApplet parent) {
-    this(parent, dname ,dmode, dverbose);
+    this(parent,dmode);
+  }
+  
+  //名前を指定しない初期化 mode指定
+  public Gainer(PApplet parent,int mode){
+    try {
+      Enumeration portList = CommPortIdentifier.getPortIdentifiers();
+      while (portList.hasMoreElements()){
+        CommPortIdentifier portId =(CommPortIdentifier) portList.nextElement();
+        if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
+          //System.out.println("found name  " + portId.getName());
+          String pname = portId.getName();
+          if(pname.startsWith("/dev/cu.usbserial-")){
+            WINDOWS = false;
+            dname = pname;
+            
+          }else if(pname.startsWith("COM")){
+            WINDOWS = true;
+          }
+        }
+      }
+    }catch (Exception e) {
+      errorMessage("<get serial name>", e);
+      e.printStackTrace();
+      
+      port = null;
+      input = null;
+      output = null;
+    }
+    
+    initialize(parent,dname,mode);
   }
 
   public Gainer(PApplet parent,String iname){
-    this(parent, iname ,dmode, dverbose);
+    this(parent, iname ,dmode);
   }
 	
-  public Gainer(PApplet parent,String iname,int mode){
-    this(parent, iname ,mode, dverbose);
-  }
 
-  public Gainer(PApplet parent, String iname,int mode,boolean verbose) {
-    //if (port != null) port.close();
+  public Gainer(PApplet parent, String iname,int mode) {
+    initialize(parent,iname,mode);
+  }
+	
+	private void initialize(PApplet parent, String iname,int mode){
+
+    
     this.parent = parent;
     //parent.attach(this);
 
     digital = new Digital(this);
     analog = new Analog(this);
+
     
     try {
       Enumeration portList = CommPortIdentifier.getPortIdentifiers();
+      System.out.println(" ");
+      System.out.println("selected port name "+iname);
+      
       while (portList.hasMoreElements()) {
         CommPortIdentifier portId =
           (CommPortIdentifier) portList.nextElement();
 
         if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
-          //System.out.println("found " + portId.getName());
+          //System.out.println("found name" + portId.getName());
           if (portId.getName().equals(iname)) {
+            System.out.println("serial port opening ...");
+            
             port = (SerialPort)portId.open("serial gainer", 2000);
             input = port.getInputStream();
             output = port.getOutputStream();
@@ -114,16 +163,15 @@ public class Gainer implements SerialPortEventListener {
             port.notifyOnDataAvailable(true);
             
             
-            System.out.println("serial port opening ...");
+            
           }
         }
       }
 
     } catch (Exception e) {
-    	//System.out.println("init "+e);
+    	System.out.println("initialize error "+e);
       errorMessage("<init>", e);
-      //exception = e;
-      //e.printStackTrace();
+      e.printStackTrace();
       port = null;
       input = null;
       output = null;
@@ -142,19 +190,37 @@ public class Gainer implements SerialPortEventListener {
     
     buffer(64);
     reboot();
+    
+    getDeviceVersion();
     setVerbose(verbose);
     configuration(mode);
     currentMode = mode;
+    
+    System.out.println("Gainer ready to Roll. ");
+	}
 
-  }
+	private void getDeviceVersion(){
+		this.write("?*");
+		try{
+		Thread.sleep(100);
+		}catch(Exception e){
+			System.out.println(e);
+		}
+		deviceVersion = sReturn.substring(1,9);
+		System.out.println("Gainer firmware ver. " + deviceVersion);
+		if(!deviceVersion.equals(firmVersion)){
+			throw new RuntimeException("Gainer error!! please check firmware version");
+		}	
+	}
 
-	private void setVerbose(boolean verbose){
-		dverbose = verbose;
+	public void setVerbose(boolean verb){
 		String c;
-		if(verbose){
+		if(verb){
 			c = "V1*";
+			System.out.println("verbose mode");
 		}else{
 			c = "V0*";
+			System.out.println("silent mode");
 		}
 		this.write(c);
 
@@ -166,7 +232,7 @@ public class Gainer implements SerialPortEventListener {
 	}
 	
 	public boolean getVerbose(){
-		return dverbose;
+		return verbose;
 	}
 	
 	private void configuration(int mode){
@@ -254,7 +320,7 @@ public class Gainer implements SerialPortEventListener {
 				throw new RuntimeException("Gainer error!! please check coneecting to gainer");
 			}		
 			break;
-			/*
+
 		case MODE7:
 			analogInput = new int[0];
 			digitalInput = new boolean[0];
@@ -266,7 +332,7 @@ public class Gainer implements SerialPortEventListener {
 				throw new RuntimeException("Gainer error!! please check coneecting to gainer");
 			}	
 			break;
-			*/
+			
 		}
 			try{
 			Thread.sleep(1000);
@@ -615,7 +681,7 @@ public class Gainer implements SerialPortEventListener {
    */
   public void write(String what) {
   	if(DEBUG){
-  		System.out.println("write -> " + what);
+  		System.out.println("command -> " + what);
   	}
     write(what.getBytes());
   }
@@ -698,7 +764,7 @@ public class Gainer implements SerialPortEventListener {
 		if(sReturn.indexOf("Q*")==-1){
 			throw new RuntimeException("Reboot Error !!!");
 		}else{
-			System.out.println("Gainer ready to Roll. ");
+			System.out.println("Gainer reboot.. ");
 		}
 		
 
@@ -779,15 +845,67 @@ public class Gainer implements SerialPortEventListener {
 		analog.out(values);
 	}
 	
-	/*
-	public void scanlineMatrix(int line,int[] values){
+	
+	public void analogAllSampling(){
+	
+		this.write("M0*");
+		waitForString("M0*");
+		
+		
+	}
+	public void analogHighSampling(){
+		this.write("M1*");
+		waitForString("M1*");
+		
+	}
+	
+	//mode7のみ
+	//line毎に処理
+	public void scanLine(int line,int[] values){
 		if(currentMode==MODE7){
-			
+			String s = "a";
+			String sv = "";
+			if(values.length == 8){
+				if(line<8){
+					s += Integer.toHexString(line).toUpperCase();
+				}else{
+					throw new RuntimeException("Gainer error!! out of bounds");
+				}
+				for(int i=0;i<8;i++){
+					sv = values[i]<16 ? "0": "";
+					s += sv;
+					s += Integer.toHexString(values[i]).toUpperCase();
+				}
+				s += "*";
+				write(s);
+	 			waitForString("a");
+			}else{
+				throw new RuntimeException("Gainer error!! number of values");
+			}
 		}else{
-			throw new RuntimeException("Gainer error!! it use only MODE7");
+			throw new RuntimeException("Gainer error!! this method can use only MODE7");
 		}
 	}
-	*/
+	//mode7のみ
+	//LEDmatrix全体を処理
+	public void scanMatrix(int[] values){
+		if(currentMode==MODE7){
+			if(values.length == 64){
+				for(int col=0;col<8;col++){
+					int[] v = new int[8];
+					for(int i=0;i<8;i++){
+						v[i] = values[col*8+i];
+					}
+					scanLine(col,v);
+				}
+			}
+		}else{
+			throw new RuntimeException("Gainer error!! this method can use only MODE7");
+		}
+	}
+	
+	
+	
 	
 	public void ampGainAGND(int gain){
 	 String s ="G";

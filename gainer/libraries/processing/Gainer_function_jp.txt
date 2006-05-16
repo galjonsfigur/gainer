@@ -1,0 +1,144 @@
+-----------Gainer 変数一覧----------------------
+
+コンフィグレーション
+MODE1
+MODE2
+MODE3
+MODE4
+MODE5
+MODE6
+MODE7
+MODE8
+
+グランド
+AGND
+GND
+DGND
+
+入力
+buttonPressed
+analogInput[]
+digitalInput[]
+
+
+--------------------------------------------------
+
+
+------------Gainer 関数一覧----------------------------
+
+デバック
+DEBUG()
+gainerのプロトコルを出力する
+
+
+ポートの名前
+すべてのシリアルポートの名前を列挙する
+String[] list()
+
+
+コンストラクタ
+
+　ポートの名前を指定しないGainerオブジェクトの作成
+　起動時のコンフィグレーションを指定する。Default　MODE1
+Gainer(PApplet parent)
+Gainer(PApplet parent,int mode)
+　Mac　最初に見つかったGainerを自動選択する
+　Win　COM3に固定される
+
+　ポートの名前を指定してGainerオブジェクトの作成
+　起動時のコンフィグレーションを指定する。Default　MODE1
+Gainer(PApplet parent,String iname)
+Gainer(PApplet parent, String iname,int mode)
+
+おしゃべりモード
+
+おしゃべりモードをセットする
+void setVerbose(boolean verbose)
+
+おしゃべりモードかどうかチェックする
+boolean getVerbose()
+
+コンフィグレーション
+
+//     ain :din :aout:dout
+//     ----:----:----:----
+// C0:    0:   0:   0:   0
+// C1:    4:   4:   4:   4
+// C2:    8:   0:   4:   4
+// C3:    4:   4:   8:   0
+// C4:    8:   0:   8:   0	
+// C5:    0:  16:   0:   0	
+// C6:    0:   0:   0:  16
+// C7: LED matrix control???	未実装
+// C8: CapSense???		未実装
+void configuration(int mode)
+
+
+LED
+
+LED を点灯する "h*"
+void turnOnLED()
+
+LED をけす "l*"
+void turnOffLED()
+
+
+デジタルポート
+
+一度だけデジタルポートの状態をdigitalInput[]に得る 
+void peekDigitalInput()
+
+デジタルポートの状態をdigitalInput[]に取得し続ける
+void beginDigitalInput()
+
+デジタルポートの状態の取得を終了する
+void endDigitalInput()
+
+デジタルポートに出力する
+void digitalOutput(int chs)
+void digitalOutput(boolean[] values)
+
+デジタルポートの状態をHighにする
+void setHigh(int ch)
+void setHigh(int[] chs)
+
+デジタルポートの状態をLowにする
+void setLow(int ch)
+void setLow(int[] chs)
+
+アナログポート
+
+一度だけアナログポートの状態をanalogInput[]に得る 
+void peekAnalogInput()
+
+アナログポートの状態をanalogInput[]に取得し続ける
+void beginAnalogInput()
+
+アナログポートの状態の取得を終了する
+void endAnalogInput()
+
+アナログポートに出力する
+void analogOutput(int ch,int value)
+void analogOutput(int[] value)
+
+アナログポートのサンプリングチャンネルの設定
+void analogHighSampling()
+高速サンプリング　ただしポート０のみ
+void analogAllSampling()
+すべてのチャンネルをサンプリングする(デフォルト)
+
+
+ゲイン　+2.5Vが中心 "G1x"
+void ampGainAGND(int gain)
+
+ゲイン　0Vが中心  "G0x"
+void ampGainDGND(int gain)
+
+
+再起動
+void reboot()
+
+
+MODE7のみ　マトリックスLEDのラインに出力する
+void scanLine(int line,int[] values)
+void scanMatrix(int[] values)

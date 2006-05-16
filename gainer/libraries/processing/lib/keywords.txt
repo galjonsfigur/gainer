@@ -509,3 +509,10 @@ setLow	KEYWORD2	libraries/gainer/setLow
 setHigh	KEYWORD2	libraries/gainer/setHigh
 turnOffLED	KEYWORD2	libraries/gainer/turnOffLED
 turnOnLED	KEYWORD2	libraries/gainer/turnOnLED
+reboot	KEYWORD2	
+ampGainAGND	KEYWORD2	
+ampGainDGND	KEYWORD2	
+analogHighSampling	KEYWORD2	
+analogAllSampling	KEYWORD2	
+setVerbose	KEYWORD2	
+
