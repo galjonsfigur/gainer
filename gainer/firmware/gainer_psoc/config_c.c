@@ -33,6 +33,8 @@ const BYTE bScanLineSelectionMask[8] = {
 	0xFE	// P0[0]
 };
 
+const BYTE bLightTable[16] = {0, 1, 2, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 255};
+
 typedef struct {
 	BYTE bData[8][8];	// 8 columns (x) by 8 rows (y)
 	BYTE bCurrentScanLine;
@@ -105,36 +107,6 @@ void Enter_Config_C(void)
 			_c.bData[column][row] = 0;
 		}
 	}
-
-#if 0
-	// THIS IS A TEST...
-	_c.bData[0][0] = 0x02;
-	_c.bData[1][1] = 0x04;
-	_c.bData[2][2] = 0x08;
-	_c.bData[3][3] = 0x10;
-	_c.bData[4][4] = 0x20;
-	_c.bData[5][5] = 0x40;
-	_c.bData[6][6] = 0x80;
-	_c.bData[7][7] = 0xFF;
-
-	_c.bData[0][0] = 0x02;
-	_c.bData[1][0] = 0x04;
-	_c.bData[2][0] = 0x08;
-	_c.bData[3][0] = 0x10;
-	_c.bData[4][0] = 0x20;
-	_c.bData[5][0] = 0x40;
-	_c.bData[6][0] = 0x80;
-	_c.bData[7][0] = 0xFF;
-
-	_c.bData[0][0] = 0x02;
-	_c.bData[0][1] = 0x04;
-	_c.bData[0][2] = 0x08;
-	_c.bData[0][3] = 0x10;
-	_c.bData[0][4] = 0x20;
-	_c.bData[0][5] = 0x40;
-	_c.bData[0][6] = 0x80;
-	_c.bData[0][7] = 0xFF;
-#endif
 
 	_c.bCurrentScanLine = 0;
 	_c.bType = COMMON_K_TYPE;
@@ -253,8 +225,8 @@ BYTE config_c_command_set_aout_column(char *pCommand)
 	BYTE column = 0;
 	BYTE value = 0;
 
-	// {a}{n:0..8}{0:00..FF}...{7:00..FF} = {1} + {1} + {2 * 8} = 18 bytes
-	if (18 != _gainer.bCommandLength) {
+	// {a}{n:0..7}{0:0..F}...{7:0..F} = {1} + {1} + {1 * 8} = 10 bytes
+	if (10 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -271,9 +243,8 @@ BYTE config_c_command_set_aout_column(char *pCommand)
 	for (row = 0; row < 8; row++) {
 		pCommand++;
 		value = HEX_TO_BYTE(*pCommand);
-		pCommand++;
-		value = (value << 4) + HEX_TO_BYTE(*pCommand);
-		_c.bData[row][column] = value;
+		// convert 4bit linear value to 8bit value via a special curve
+		_c.bData[row][column] = bLightTable[value];
 	}
 
 	if (!_gainer.bVerboseMode) {
