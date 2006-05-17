@@ -2,7 +2,7 @@
 #include "bootloader.h"    // API definitions for all BootLoader Modules
 #include <FlashBlock.h>
 
-#define LAST_BLOCK_TO_CHECK	455		// Minimum = 1; Maximum = 455; if 0 then don't calculate CS
+#define LAST_BLOCK_TO_CHECK	0		// Minimum = 1; Maximum = 455; if 0 then don't calculate CS
 #define ENABLE_CONNECT_BY_PSOC	0	// 0-disable 	1-enable
 
 #pragma text:BootCheckSum
