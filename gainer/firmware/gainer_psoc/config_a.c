@@ -119,8 +119,8 @@ void Enter_Config_A(void)
 
 	LoadConfig_config_a();
 
-	_gainer.bContinuousAinRequested = FALSE;
-	_gainer.bContinuousAinMask = 0x00;
+	_gainer.bGetAinRequested = AIN_NONE;
+	_gainer.bGetAinChannelMask = 0x00;
 	_gainer.bContinuousDinRequested = FALSE;
 
 	_a.bAdcChannelNumber = AMUX4_A_1_PORT0_0;	// i.e. ain 3
@@ -344,15 +344,17 @@ void handle_ain_event(void)
 
 		_a.bAdcFlags &= ~0x01;
 
-		if (_gainer.bContinuousAinRequested) {
-			// send ain data when measured all channels
-			send_ain_values();
-		} else {
+		if (AIN_CONTINUOUS != _gainer.bGetAinRequested) {
 			// update min and max values
 			for (i = 0; i < _gainer.bChannels_AIN; i++) {
 				_a.bAnalogInputMin[i] = MIN(_a.bAnalogInputMin[i], _a.bAnalogInput[i]);
 				_a.bAnalogInputMax[i] = MAX(_a.bAnalogInputMax[i], _a.bAnalogInput[i]);
 			}
+		}
+
+		if (AIN_NONE != _gainer.bGetAinRequested) {
+			// send ain data when measured all channels
+			send_ain_values();
 		}
 
 		// send din data here to avaiod stupid sending
@@ -392,6 +394,11 @@ void handle_commands_config_a(void)
 			_gainer.bCommandLength = UART_bCmdLength();
 			memcpy(_gainer.cLocalRxBuffer, pCommand, _gainer.bCommandLength);
 			UART_CmdReset();
+
+			// ignore a command if specified command length is zero
+			if (0 == _gainer.bCommandLength) {
+				return;			
+			}
 
 			switch (*_gainer.cLocalRxBuffer) {
 				case 'D':	// set all digital outputs (Dxx)
@@ -481,7 +488,7 @@ BYTE command_set_dout_all(char *pCommand)
 	BYTE i = 0;
 	WORD value = 0;
 
-	if (5 != _gainer.bCommandLength) {
+	if (5 != _gainer.bCommandLength) { 
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -686,26 +693,15 @@ BYTE command_get_din_all(char *pCommand, BOOL bContinuous)
 
 BYTE command_get_ain_all(char *pCommand, BOOL bContinuous)
 {
-	BYTE i = 0;
-
 	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
 
-	_gainer.bContinuousAinRequested = bContinuous;
-	_gainer.bContinuousAinMask = _gainer.bContinuousAinRequested ? 0xFF : 0x00;
+	_gainer.bGetAinRequested = bContinuous ? AIN_CONTINUOUS : AIN_ONCE;
+	_gainer.bGetAinChannelMask = 0xFF;	// get all channels
 
-	_gainer.cReplyBuffer[0] = *pCommand;
-
-	prepare_ain_values();
-
-	for (i = 0; i < _gainer.bChannels_AIN; i++) {
-		ByteToHex(_a.bAnalogInput[i], &_gainer.cReplyBuffer[(i * 2) + 1]);
-	}
-	_gainer.cReplyBuffer[(_gainer.bChannels_AIN * 2) + 1] = '*';
-
-	return ((_gainer.bChannels_AIN * 2) + 2);	// 10 or 18 bytes
+	return 0;	// send reply later on
 }
 
 BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
@@ -718,7 +714,7 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 		return 2;
 	}
 
-	_gainer.bContinuousAinRequested = bContinuous;
+	_gainer.bGetAinRequested = bContinuous ? AIN_CONTINUOUS : AIN_ONCE;
 
 	channel = HEX_TO_BYTE(*(pCommand + 1));
 
@@ -728,19 +724,9 @@ BYTE command_get_ain_ch(char *pCommand, BOOL bContinuous)
 		return 2;
 	}
 
-	if (_gainer.bContinuousAinRequested) {
-		_gainer.bContinuousAinMask = 1 << channel;	// e.g. 0x10 means 4th channel
-	} else {
-		_gainer.bContinuousAinMask = 0x00;
-	}
+	_gainer.bGetAinChannelMask = 1 << channel;	// e.g. 0x10 means 4th channel
 
-	prepare_ain_values();
-
-	_gainer.cReplyBuffer[0] = *pCommand;
-	ByteToHex(_a.bAnalogInput[channel], &_gainer.cReplyBuffer[1]);
-	_gainer.cReplyBuffer[3] = '*';
-
-	return 4;
+	return 0;	// send reply later on
 }
 
 BYTE command_stop_cont(void)
@@ -750,8 +736,8 @@ BYTE command_stop_cont(void)
 		return 2;
 	}
 
-	_gainer.bContinuousAinRequested = FALSE;
-	_gainer.bContinuousAinMask = 0x00;
+	_gainer.bGetAinRequested = AIN_NONE;
+	_gainer.bGetAinChannelMask = 0x00;
 	_gainer.bContinuousDinRequested = FALSE;
 	_gainer.cReplyBuffer[0] = 'E';
 	_gainer.cReplyBuffer[1] = '*';
@@ -880,44 +866,6 @@ BYTE command_reboot_a(void)
 
 BOOL set_aout(BYTE channel, BYTE value)
 {
-#if 0
-	switch (channel) {
-		case 0:
-			PWM8_A_4_WritePulseWidth(value);
-			break;
-
-		case 1:
-			PWM8_A_3_WritePulseWidth(value);
-			break;
-
-		case 2:
-			PWM8_A_2_WritePulseWidth(value);
-			break;
-
-		case 3:
-			PWM8_A_1_WritePulseWidth(value);
-			break;
-
-		case 4:
-			PWM8_A_8_WritePulseWidth(value);
-			break;
-
-		case 5:
-			PWM8_A_7_WritePulseWidth(value);
-			break;
-
-		case 6:
-			PWM8_A_6_WritePulseWidth(value);
-			break;
-
-		case 7:
-			PWM8_A_5_WritePulseWidth(value);
-			break;
-
-		default:
-			break;
-	}
-#else
 	// NOTE: There should be some possibilities to optimize this implementation
 	if (0 == channel) {
 		PWM8_A_4_WritePulseWidth(value);
@@ -936,7 +884,6 @@ BOOL set_aout(BYTE channel, BYTE value)
 	} else if (7 == channel) {
 		PWM8_A_5_WritePulseWidth(value);
 	}
-#endif
 
 	return TRUE;
 }
@@ -968,8 +915,15 @@ void send_ain_values(void)
 		return;
 	}
 
-	if (0xFF == _gainer.bContinuousAinMask) {
-		_gainer.cReplyBuffer[0] = 'i';
+	if (0xFF == _gainer.bGetAinChannelMask) {
+		if (AIN_CONTINUOUS == _gainer.bGetAinRequested) {
+			// continuous mode
+			_gainer.cReplyBuffer[0] = 'i';
+		} else {
+			// one time only mode
+			_gainer.cReplyBuffer[0] = 'I';
+			prepare_ain_values();
+		}
 
 		for (i = 0; i < _gainer.bChannels_AIN; i++) {
 			ByteToHex(_a.bAnalogInput[i], &_gainer.cReplyBuffer[(i * 2) + 1]);
@@ -978,29 +932,42 @@ void send_ain_values(void)
 		_gainer.cReplyBuffer[(_gainer.bChannels_AIN * 2) + 1] = '*';
 		length = (_gainer.bChannels_AIN * 2) + 2;	// 10 or 18 bytes
 	} else {
-		if (_gainer.bContinuousAinMask & 0x80) {
+		if (AIN_CONTINUOUS == _gainer.bGetAinRequested) {
+			// continuous mode
+			_gainer.cReplyBuffer[0] = 's';
+		} else {
+			// one time only mode
+			_gainer.cReplyBuffer[0] = 'S';
+			prepare_ain_values();
+		}
+
+		if (_gainer.bGetAinChannelMask & 0x80) {
 			channel = 7;
-		} else if (_gainer.bContinuousAinMask & 0x40) {
+		} else if (_gainer.bGetAinChannelMask & 0x40) {
 			channel = 6;
-		} else if (_gainer.bContinuousAinMask & 0x20) {
+		} else if (_gainer.bGetAinChannelMask & 0x20) {
 			channel = 5;
-		} else if (_gainer.bContinuousAinMask & 0x10) {
+		} else if (_gainer.bGetAinChannelMask & 0x10) {
 			channel = 4;
-		} else if (_gainer.bContinuousAinMask & 0x04) {
+		} else if (_gainer.bGetAinChannelMask & 0x04) {
 			channel = 3;
-		} else if (_gainer.bContinuousAinMask & 0x04) {
+		} else if (_gainer.bGetAinChannelMask & 0x04) {
 			channel = 2;
-		} else if (_gainer.bContinuousAinMask & 0x02) {
+		} else if (_gainer.bGetAinChannelMask & 0x02) {
 			channel = 1;
 		}
 
-		_gainer.cReplyBuffer[0] = 's';
 		ByteToHex(_a.bAnalogInput[channel], &_gainer.cReplyBuffer[1]);
 		_gainer.cReplyBuffer[3] = '*';
 		length = 4;
 	}
 
 	UART_Write(_gainer.cReplyBuffer, length);
+
+	// change status if current status is AIN_ONCE
+	if (AIN_ONCE == _gainer.bGetAinRequested) {
+		_gainer.bGetAinRequested = AIN_NONE;
+	}
 }
 
 void send_din_values(void)
