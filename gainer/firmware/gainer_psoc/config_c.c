@@ -98,8 +98,8 @@ void Enter_Config_C(void)
 	_gainer.bCurrentConfig = _gainer.bRequestedConfig;
 	_gainer.pMainFunction = Main_Config_C;
 
-	_gainer.bContinuousAinRequested = FALSE;
-	_gainer.bContinuousAinMask = 0x00;
+	_gainer.bGetAinRequested = AIN_NONE;
+	_gainer.bGetAinChannelMask = 0x00;
 	_gainer.bContinuousDinRequested = FALSE;
 
 	for (row = 0; row < 7; row++) {

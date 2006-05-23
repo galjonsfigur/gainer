@@ -31,6 +31,13 @@ enum {
 	CONFIG_8,			// C8:     :  *8:   0:   8: CapSense(4) + Digital In(4)
 };
 
+enum {
+	AIN_NONE = 0,	// no need to do A/D conversion
+	AIN_ONCE,		// do A/D conversion only one time
+	AIN_CONTINUOUS,	// do A/D conversion continuously
+};
+
+
 /**
  * public functions of CONFIG_START
  * implemented in main.c
@@ -86,8 +93,8 @@ typedef struct {
 	BYTE bChannels_DIN;
 	BYTE bChannels_DOUT;
 
-	BOOL bContinuousAinRequested;
-	BYTE bContinuousAinMask;
+	BYTE bGetAinRequested;
+	BYTE bGetAinChannelMask;
 	BOOL bContinuousDinRequested;
 
 	char cLocalRxBuffer[128];

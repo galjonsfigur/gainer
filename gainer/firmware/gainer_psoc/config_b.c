@@ -102,8 +102,8 @@ void Enter_Config_B(void)
 	_gainer.bCurrentConfig = _gainer.bRequestedConfig;
 	_gainer.pMainFunction = Main_Config_B;
 
-	_gainer.bContinuousAinRequested = FALSE;
-	_gainer.bContinuousAinMask = 0x00;
+	_gainer.bGetAinRequested = AIN_NONE;
+	_gainer.bGetAinChannelMask = 0x00;
 	_gainer.bContinuousDinRequested = FALSE;
 
 	_b.bDinTimerFlags = 0x00;
