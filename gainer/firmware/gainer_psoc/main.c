@@ -14,7 +14,7 @@ global_parameters _gainer;
  * private functions of CONFIG_START
  */
 const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
-const char cVersionString[] = {'1','.','0','.','0','.','1','4'};
+const char cVersionString[] = {'1','.','0','.','0','.','1','5'};
 
 void handle_commands_config_start(void);
 BYTE handle_config_command(char *pCommand);
@@ -321,8 +321,8 @@ void PutErrorStringToReplyBuffer(void)
 
 void init_global_parameters(void)
 {
-	_gainer.bContinuousAinRequested = FALSE;
-	_gainer.bContinuousAinMask = 0x0000;
+	_gainer.bGetAinRequested = AIN_NONE;
+	_gainer.bGetAinChannelMask = 0x0000;
 	_gainer.bContinuousDinRequested = FALSE;
 	_gainer.bQuitRequested = FALSE;
 	_gainer.bVerboseMode = TRUE;
