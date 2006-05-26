@@ -25,6 +25,7 @@ public class Digital {
 	public void peek()
 	{
 		gainer.write("R*");
+		gainer.waitForString("R");
 	}
 	
 	public void begin()
@@ -53,7 +54,13 @@ public class Digital {
 			gainer.write(s);
 			if(gainer.getVerbose()){
 				gainer.waitForString("D");
-			}
+			}else{
+			try{
+				Thread.sleep(1);
+			}catch(Exception e){
+				System.out.println(e);
+			}	
+		}
 		}else{
 			throw new IndexOutOfBoundsException("Gainer error!! out of bounds digital port");
 		}
@@ -81,6 +88,12 @@ public class Digital {
 		gainer.write(s);
 		if(gainer.getVerbose()){
 			gainer.waitForString("D");
+		}else{
+			try{
+				Thread.sleep(1);
+			}catch(Exception e){
+				System.out.println(e);
+			}	
 		}
   }  
   //指定したチャンネルをHigh
@@ -88,7 +101,15 @@ public class Digital {
 		if(numOutCh>ch){
 			String s = "H" + Integer.toHexString(ch).toUpperCase() + "*";
 			gainer.write(s);
-			gainer.waitForString("H");
+			if(gainer.getVerbose()){
+				gainer.waitForString("H");
+			}else{
+			try{
+				Thread.sleep(1);
+			}catch(Exception e){
+				System.out.println(e);
+			}	
+		}
 		}else{
 			throw new IndexOutOfBoundsException("Gainer error!! out of bounds digital out");
 		}
@@ -98,7 +119,15 @@ public class Digital {
 		if(numOutCh>ch){
 			String s = "L" + Integer.toHexString(ch).toUpperCase() + "*";
 			gainer.write(s);
-			gainer.waitForString("L");
+			if(gainer.getVerbose()){
+				gainer.waitForString("L");
+			}else{
+			try{
+				Thread.sleep(1);
+			}catch(Exception e){
+				System.out.println(e);
+			}	
+		}
 		}else{
 			throw new IndexOutOfBoundsException("Gainer error!! out of bounds digital out");
 		}
@@ -125,7 +154,15 @@ public class Digital {
 		//sv+= Integer.toHexString(val).toUpperCase();
 		String s = "D"+ sv+"*";
 		gainer.write(s);
-		gainer.waitForString("D");
+		if(gainer.getVerbose()){
+			gainer.waitForString("D");
+		}else{
+			try{
+				Thread.sleep(1);
+			}catch(Exception e){
+				System.out.println(e);
+			}	
+		}
 		
   }
   //配列のチャンネルをlow それ以外はHigh
@@ -154,7 +191,15 @@ public class Digital {
 		//sv+= Integer.toHexString(val).toUpperCase();
 		String s = "D"+ sv+"*";
 		gainer.write(s);
-		gainer.waitForString("D");
+		if(gainer.getVerbose()){
+			gainer.waitForString("D");
+		}else{
+			try{
+				Thread.sleep(1);
+			}catch(Exception e){
+				System.out.println(e);
+			}	
+		}
 		
   }
   

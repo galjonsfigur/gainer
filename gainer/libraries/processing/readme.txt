@@ -1,6 +1,6 @@
 Gainer Processing library
-farm version: 1-0-0-14
-date: 2006.05.13
+farm version: 1-0-0-15
+date: 2006.05.26
 
 
 Files
@@ -19,6 +19,13 @@ There are examples for Gainer library. You can copy contents into processing exa
 
 
 Revision History
+
+2006/05.26 (1-0-0-15)
+*change waiting for peek command
+*change constractor
+*change name of function
+(analogHighSampling->analogSamplingSingleChannel
+,analogAllSampling ->analogSamplingAllChannels)
 
 2006/05.13 (1-0-0-14)
 *change constracter on mac

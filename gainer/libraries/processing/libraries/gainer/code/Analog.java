@@ -31,6 +31,7 @@ public class Analog{
   
   public void peek(){
   	gainer.write("I*");
+  	gainer.waitForString("I");
   }
   
   //指定したチャンネルへ送信
@@ -45,7 +46,15 @@ public class Analog{
 			s+=sv;
 			s+="*";
 			gainer.write(s);
-			gainer.waitForString("a");//*はこないよ！
+			if(gainer.getVerbose()){
+				gainer.waitForString("a");//*はこないよ！
+			}else{
+				try{
+					Thread.sleep(1);
+				}catch(Exception e){
+					System.out.println(e);
+				}	
+			}
   	}else{
   		throw new IndexOutOfBoundsException("Gainer error!! out of bounds analog out");
   	}
@@ -67,7 +76,15 @@ public class Analog{
   		throw new IndexOutOfBoundsException("Gainer error!! - number of analog outputs are wrong");
 		}
 		gainer.write(s);
-		gainer.waitForString("A");
+		if(gainer.getVerbose()){
+			gainer.waitForString("A");
+		}else{
+			try{
+				Thread.sleep(1);
+			}catch(Exception e){
+				System.out.println(e);
+			}	
+		}
 		
   }
 

@@ -35,7 +35,7 @@ public class Gainer implements SerialPortEventListener {
   
   private boolean WINDOWS = true;
   
-  public final String firmVersion = "1.0.0.14";
+  public final String firmVersion = "1.0.0.15";
   public String deviceVersion;
 
   private int currentMode = 0;
@@ -63,13 +63,13 @@ public class Gainer implements SerialPortEventListener {
   public int[] analogInput;
   public boolean[] digitalInput;
 
-	private static boolean verbose = true;
+	private static boolean verbose;
 
   private boolean analogSeq = false;
   private boolean digitalSeq = false;
 	
   private String sReturn;
-  private final int TIMEOUT = 1000;
+  private final int TIMEOUT = 100;
 
   public InputStream input;
   public OutputStream output;
@@ -89,11 +89,19 @@ public class Gainer implements SerialPortEventListener {
 
 	//名前を指定しない初期化
   public Gainer(PApplet parent) {
-    this(parent,dmode);
+    this(parent,dmode,false);
+  }
+  
+  public Gainer(PApplet parent,boolean verb){
+  	this(parent,dmode,verb);
+  }
+  
+  public Gainer(PApplet parent,int mode){
+  	this(parent,mode,false);
   }
   
   //名前を指定しない初期化 mode指定
-  public Gainer(PApplet parent,int mode){
+  public Gainer(PApplet parent,int mode,boolean verb){
     try {
       Enumeration portList = CommPortIdentifier.getPortIdentifiers();
       while (portList.hasMoreElements()){
@@ -119,19 +127,27 @@ public class Gainer implements SerialPortEventListener {
       output = null;
     }
     
-    initialize(parent,dname,mode);
+    initialize(parent,dname,mode,verb);
   }
 
   public Gainer(PApplet parent,String iname){
-    this(parent, iname ,dmode);
+    this(parent, iname ,dmode,false);
   }
 	
 
-  public Gainer(PApplet parent, String iname,int mode) {
-    initialize(parent,iname,mode);
+  public Gainer(PApplet parent,String iname,int mode) {
+    initialize(parent,iname,mode,false);
+  }
+  
+  public Gainer(PApplet parent,String iname,boolean verb){
+  	initialize(parent,iname,dmode,verb);
+  }
+  
+  public Gainer(PApplet parent,String iname,int mode,boolean verb) {
+    initialize(parent,iname,mode,verb);
   }
 	
-	private void initialize(PApplet parent, String iname,int mode){
+	private void initialize(PApplet parent, String iname,int mode,boolean verb){
 
     
     this.parent = parent;
@@ -192,6 +208,7 @@ public class Gainer implements SerialPortEventListener {
     reboot();
     
     getDeviceVersion();
+    verbose = verb;
     setVerbose(verbose);
     configuration(mode);
     currentMode = mode;
@@ -208,12 +225,13 @@ public class Gainer implements SerialPortEventListener {
 		}
 		deviceVersion = sReturn.substring(1,9);
 		System.out.println("Gainer firmware ver. " + deviceVersion);
-		if(!deviceVersion.equals(firmVersion)){
+		deviceVersion = deviceVersion.substring(0,5);
+		if(!firmVersion.startsWith(deviceVersion) ){
 			throw new RuntimeException("Gainer error!! please check firmware version");
 		}	
 	}
 
-	public void setVerbose(boolean verb){
+	private void setVerbose(boolean verb){
 		String c;
 		if(verb){
 			c = "V1*";
@@ -403,6 +421,7 @@ public class Gainer implements SerialPortEventListener {
             		value = sReturn.substring(2*i+1,2*(i+1)+1);
             		analogInput[i] = Integer.parseInt(value,16);
             	}
+            	
             }else if(sReturn.startsWith("r") || sReturn.startsWith("R")){
             	int value = Integer.parseInt(sReturn.substring(1,5),16);
             	for(int i=0;i<digitalInput.length;i++){
@@ -639,18 +658,6 @@ public class Gainer implements SerialPortEventListener {
   }
 
 
-  /**
-   * This will handle both ints, bytes and chars transparently.
-   */
-  private void write(int what) {  // will also cover char
-    try {
-      output.write(what & 0xff);  // for good measure do the &
-      //output.flush();   // hmm, not sure if a good idea
-
-    } catch (Exception e) { // null pointer or serial port dead
-      errorMessage("write", e);
-    }
-  }
 
 
   private void write(byte bytes[]) {
@@ -681,7 +688,7 @@ public class Gainer implements SerialPortEventListener {
    */
   public void write(String what) {
   	if(DEBUG){
-  		System.out.println("command -> " + what);
+  		System.out.println(what + "-> gainer");
   	}
     write(what.getBytes());
   }
@@ -737,19 +744,23 @@ public class Gainer implements SerialPortEventListener {
 		//
 		while(!sReturn.startsWith(s) && count>0){
 			count--;
+			if(sReturn.startsWith("!*")){
+				System.out.println("gainer wrong return code error!!" );
+				return false;
+			}
 			try{
-			Thread.sleep(1);
+			Thread.sleep(10);
 			}catch(Exception e){
 				System.out.println(e);
 			}
 		}
 		
 		if(!sReturn.startsWith(s)){
-			System.out.println("wait for  " + s);
-			System.out.println("gainer TIMEOUT return code error!!" );
+			System.out.print("wait for  " + s + " recv:" + sReturn);
+			System.out.println("   gainer TIMEOUT return code error!!" );
 			return false;
 		}
-		int t = TIMEOUT-count;
+		//int t = TIMEOUT-count;
 		//System.out.println("wait for string " + sReturn + " count " + t);
 		return true;
 	}
@@ -773,13 +784,29 @@ public class Gainer implements SerialPortEventListener {
 	public void turnOnLED(){
 
 		this.write("h*");
-		waitForString("h");
+		if(getVerbose()){
+			waitForString("h");
+		}else{
+			try{
+				Thread.sleep(1);
+			}catch(Exception e){
+				System.out.println(e);
+			}  	
+		}
 	}
 	
 	public void turnOffLED(){
 		
 		this.write("l*");
-		waitForString("l");
+		if(getVerbose()){
+			waitForString("l");
+		}else{
+			try{
+				Thread.sleep(1);
+			}catch(Exception e){
+				System.out.println(e);
+			}	
+		}
 	}
 	
 	public void peekDigitalInput(){
@@ -796,10 +823,12 @@ public class Gainer implements SerialPortEventListener {
 	//全チャンネルに一度に送信
 	public void digitalOutput(int chs){
 		digital.out(chs);
+
 	}
 	
 	public void digitalOutput(boolean[] values){
 		digital.out(values);
+		clear();
 	}
 	
 	//指定したチャンネルをHigh
@@ -846,14 +875,12 @@ public class Gainer implements SerialPortEventListener {
 	}
 	
 	
-	public void analogAllSampling(){
+	public void analogSamplingAllChannels(){
 	
 		this.write("M0*");
 		waitForString("M0*");
-		
-		
 	}
-	public void analogHighSampling(){
+	public void analogSamplingSingleChannel(){
 		this.write("M1*");
 		waitForString("M1*");
 		

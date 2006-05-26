@@ -42,21 +42,24 @@ String[] list()
 　起動時のコンフィグレーションを指定する。Default　MODE1
 Gainer(PApplet parent)
 Gainer(PApplet parent,int mode)
+Gainer(PApplet parent,boolean verbose)
+Gainer(PApplet parent,int mode,boolean verbose)
 　Mac　最初に見つかったGainerを自動選択する
 　Win　COM3に固定される
+　おしゃべりモード verbose デフォルトはfalse
+　モード設定       mode    デフォルトはMODE1
 
 　ポートの名前を指定してGainerオブジェクトの作成
 　起動時のコンフィグレーションを指定する。Default　MODE1
-Gainer(PApplet parent,String iname)
+Gainer(PApplet parent, String iname)
 Gainer(PApplet parent, String iname,int mode)
+Gainer(PApplet parent, String ineme,boolean verbose)
+Gainer(PApplet parent, String iname,int mode,boolean verbose)
 
-おしゃべりモード
+　名前             iname   シリアルボートの名前を指定する
+　おしゃべりモード verbose デフォルトはfalse
+　モード設定       mode    デフォルトはMODE1
 
-おしゃべりモードをセットする
-void setVerbose(boolean verbose)
-
-おしゃべりモードかどうかチェックする
-boolean getVerbose()
 
 コンフィグレーション
 
