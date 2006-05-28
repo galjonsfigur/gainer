@@ -4,9 +4,9 @@
  * @version 1.0
  */
 
-import pdp.*;
+import gainer.*;
 
-class pdp.SerialPort {
+class gainer.SerialPort {
 	
 	private var ip:String;
 	private var port:Number;

@@ -4,9 +4,9 @@
  * @version 1.0
  */
 
-import pdp.*;
+import gainer.*;
 
-class pdp.Timer
+class gainer.Timer
 {     
 		private var timeInt:Number;
 		

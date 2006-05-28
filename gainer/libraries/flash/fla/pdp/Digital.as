@@ -4,16 +4,16 @@
  * @version 1.0
  */
 
-import pdp.*;
+import gainer.*;
 
-class pdp.Digital {
+class gainer.Digital {
 	
-	public var gainer:Gainer;
+	public var _gainer:Gainer;
 	public var numInCh:Number = 4;
 	public var numOutCh:Number = 4;
 	
-	function Digital(gainer:Gainer) {
-		this.gainer = gainer;
+	function Digital(_gainer:Gainer) {
+		this._gainer = _gainer;
 	}
 	
 	public function configuration(nIn:Number, nOut:Number):Void {
@@ -22,16 +22,16 @@ class pdp.Digital {
 	}
 	
 	public function peek():Void {
-		gainer.enqueue(new SynchronizedGC(gainer, "R*", "R"));
-		//gainer.enqueue(new GainerCommand(gainer, "R*"));
+		_gainer.enqueue(new SynchronizedGC(_gainer, "R*", "R"));
+		//_gainer.enqueue(new GainerCommand(_gainer, "R*"));
 	}
 	
 	public function begin():Void {
-		gainer.enqueue(new GainerCommand(gainer, "r*"));
+		_gainer.enqueue(new GainerCommand(_gainer, "r*"));
 	}
 	
 	public function end():Void {
-		gainer.enqueue(new SynchronizedGC(gainer, "E*", "E*"));
+		_gainer.enqueue(new SynchronizedGC(_gainer, "E*", "E*"));
 	}
 	
 	//全チャンネルに一度に送信
@@ -60,8 +60,8 @@ class pdp.Digital {
 			sv += val;
 			var s:String = "D"+sv+"*";
 			
-			if (gainer.getVerbose()) gainer.enqueue(new SynchronizedGC(gainer, s, "D"));
-			else gainer.enqueue(new GainerCommand(gainer, s));
+			if (_gainer.getVerbose()) _gainer.enqueue(new SynchronizedGC(_gainer, s, "D"));
+			else _gainer.enqueue(new GainerCommand(_gainer, s));
 				
 		} else {
 			trace("Gainer error!! out of bounds digital out");
@@ -73,7 +73,7 @@ class pdp.Digital {
 			if (numOutCh>ch) {
 				var s:String = "H"+ch.toString(16)+"*";
 				trace(s);
-				gainer.enqueue(new SynchronizedGC(gainer, s, "H"));
+				_gainer.enqueue(new SynchronizedGC(_gainer, s, "H"));
 			} else {
 				trace("Gainer error!! out of bounds digital out");
 			}
@@ -93,7 +93,7 @@ class pdp.Digital {
 			}
 			sv += val;
 			var s:String = "D"+sv+"*";
-			gainer.enqueue(new SynchronizedGC(gainer, s, "D"));
+			_gainer.enqueue(new SynchronizedGC(_gainer, s, "D"));
 		}
 	}
 	//指定したチャンネルをLOW
@@ -101,7 +101,7 @@ class pdp.Digital {
 		if(typeof(ch) == "number") {
 			if (numOutCh>ch) {
 				var s:String = "L"+ch.toString(16)+"*";
-				gainer.enqueue(new SynchronizedGC(gainer, s, "L"));
+				_gainer.enqueue(new SynchronizedGC(_gainer, s, "L"));
 			} else {
 				trace("Gainer error!! out of bounds digital out");
 			}
@@ -126,7 +126,7 @@ class pdp.Digital {
 			}
 			sv += val;
 			var s:String = "D"+sv+"*";
-			gainer.enqueue(new SynchronizedGC(gainer, s, "D"));
+			_gainer.enqueue(new SynchronizedGC(_gainer, s, "D"));
 		}
 	}
 }

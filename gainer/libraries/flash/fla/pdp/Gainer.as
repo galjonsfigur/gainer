@@ -5,9 +5,9 @@
  */
 
 import mx.utils.Delegate;
-import pdp.*;
+import gainer.*;
 
-class pdp.Gainer extends CommandQueue{
+class gainer.Gainer extends CommandQueue{
 
 	public var buttonPressed:Boolean;
 	

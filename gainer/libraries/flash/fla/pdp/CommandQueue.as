@@ -5,9 +5,9 @@
  */
 
 import mx.events.EventDispatcher;
-import pdp.*;
+import gainer.*;
 
-class pdp.CommandQueue {
+class gainer.CommandQueue {
 	
 	private var commands:Array;
 	
@@ -71,7 +71,7 @@ class pdp.CommandQueue {
 		evtObj.target.removeEventListener("onSuccess", this);
 		evtObj.target.removeEventListener("onFailed", this);
 		trace("wait for  " + evtObj.target.returnCode);
-		trace("gainer TIMEOUT return code error!!" );
+		trace("_gainer TIMEOUT return code error!!" );
 		onTimeout(evtObj.target);
 		//dispatchEvent({type:"onTimeout", command:evtObj.target});
 	}

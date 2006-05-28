@@ -4,15 +4,15 @@
  * @version 1.0
  */
 
-import pdp.*;
+import gainer.*;
 
-class pdp.Analog {
-	private var gainer:Gainer;
+class gainer.Analog {
+	private var _gainer:Gainer;
 	public var numInCh:Number = 4;
 	public var numOutCh:Number = 4;
 	
-	function Analog(gainer:Gainer) {
-		this.gainer = gainer;
+	function Analog(_gainer:Gainer) {
+		this._gainer = _gainer;
 	}
 	
 	public function configuration(nIn:Number,nOut:Number):Void {
@@ -22,17 +22,17 @@ class pdp.Analog {
 	
   	//アナログ受信開始
   	public function begin():Void {
-		gainer.enqueue(new GainerCommand(gainer, "i*"));
+		_gainer.enqueue(new GainerCommand(_gainer, "i*"));
   	}
  
   	//アナログ受信終了
   	public function end():Void {
-		gainer.enqueue(new SynchronizedGC(gainer, "E*", "E*"));
+		_gainer.enqueue(new SynchronizedGC(_gainer, "E*", "E*"));
   	}
 	
 	public function peek():Void {
-		gainer.enqueue(new SynchronizedGC(gainer, "I*", "I"));
-		//gainer.enqueue(new GainerCommand(gainer, "I*"));
+		_gainer.enqueue(new SynchronizedGC(_gainer, "I*", "I"));
+		//_gainer.enqueue(new GainerCommand(_gainer, "I*"));
   	}
 	
 	//指定したチャンネルへ送信
@@ -47,7 +47,7 @@ class pdp.Analog {
 				sv+= value.toString(16);
 				s+=sv;
 				s+="*";
-				gainer.enqueue(new SynchronizedGC(gainer, s, "a"));
+				_gainer.enqueue(new SynchronizedGC(_gainer, s, "a"));
 			}else{
 				trace("Gainer error!! out of bounds analog out");
 			}
@@ -68,7 +68,7 @@ class pdp.Analog {
 			}else{
 				trace("Gainer error!! - number of analog outputs are wrong");
 			}
-			gainer.enqueue(new SynchronizedGC(gainer, s, "A"));
+			_gainer.enqueue(new SynchronizedGC(_gainer, s, "A"));
 		}
  	 }
 }

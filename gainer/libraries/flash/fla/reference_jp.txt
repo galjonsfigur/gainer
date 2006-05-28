@@ -133,6 +133,9 @@ enqueue(new Sleep(wait:Number)):Void
 
 enqueue(command:Function):Void
 	コマンドキューの最後に、(GAINERと同期させたい)関数を追加する
+	
+dequeue():Void
+	タイムアウトによりコマンドの実行が停止したとき、再開する
 
 getTaskCount():Number
 	コマンドキューに残っているタスクの数を返す

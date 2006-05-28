@@ -4,9 +4,9 @@
  * @version 1.0
  */
 
-import pdp.*;
+import gainer.*;
 
-class pdp.Sleep extends GainerCommand{
+class gainer.Sleep extends GainerCommand{
 	
 	private var wait:Number = 100;
 	
