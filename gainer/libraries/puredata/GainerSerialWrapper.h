@@ -10,22 +10,21 @@
 	SAITA Kazuki
 
 !!!!!!!!!!!!!!DONE                     !!!!!!!!!!!!!!
-!!!!!!!!!!!!!!HACK: Implementing       !!!!!!!!!!!!!!
-!!!!!!!!!!!!!!HACK: Not Yet Implemented!!!!!!!!!!!!!!
 CgainerSerialWrapper(string port);
 ~CgainerSerialWrapper(string port);
-
 void configuration(int mode)
 void turnOnLED()
 void turnOffLED()
+void setVerbose(boolean verbose)
+!!!!!!!!!!!!!!HACK: Implementing       !!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!HACK: Not Yet Implemented!!!!!!!!!!!!!!
+
+
 
 DEBUG()
 void setVerbose(boolean verbose)
 boolean getVerbose()
-
-void configuration(int mode)
-void turnOnLED()
-void turnOffLED()
 void peekDigitalInput()
 void beginDigitalInput()
 void endDigitalInput()

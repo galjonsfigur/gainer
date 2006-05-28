@@ -1,3 +1,16 @@
+2006-05-28    <kaz@MONOLITH>
+
+	* SerialWin:
+	シリアルポートの初期化/終了
+	Verbose
+	configuration
+	LEDOn
+	LEDOff
+	sendSerial
+
+	を実装
+	
+
 2006-05-20    <kaz@MONOLITH>
 
 	* さらにガワ工事:

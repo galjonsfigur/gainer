@@ -52,6 +52,12 @@ public:
 	virtual void reboot() =0;
 	virtual void scanLine(int line,int* values) =0;
 	virtual void scanMatrix(int* values) =0;
+
+private:
+	virtual void initSerial(string port) = 0;
+	virtual void sendSerial(string command) = 0;
+	virtual void getSerial() = 0;
+	
 };
 
 #endif // __SERIALH__
