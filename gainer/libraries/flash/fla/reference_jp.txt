@@ -1,0 +1,183 @@
+﻿********************************************************************
+*Constructor
+********************************************************************
+
+Gainer(host:String, port:Number, mode:Number, verbose:Boolean)
+
+	host: ホストのアドレス
+	port: ポート番号
+	mode: Gainer.MODE1|Gainer.MODE2|Gainer.MODE3|Gainer.MODE4|Gainer.MODE5|Gainer.MODE6
+	//        ain :din :aout:dout
+	//        ----:----:----:----
+	// MODE1:    4:   4:   4:   4
+	// MODE2:    8:   0:   4:   4
+	// MODE3:    4:   4:   8:   0
+	// MODE4:    8:   0:   8:   0	
+	// MODE5:    0:  16:   0:   0	
+	// MODE6:    0:   0:   0:  16
+	verbose: リターンコードを返してもらう(true)か否(false)か   true推奨
+
+
+
+********************************************************************
+*Property
+********************************************************************
+
+timeout:Number
+	GAINERからのリターンコードが返ってこなかったとみなすまでの時間(msec)
+
+buttonPressed:Boolean
+	GAINERボード上のボタンが押されている(true)か否(false)か
+
+digitalInput:Array
+	dinのBoolean配列
+
+analogInput:Array
+	ainのNumber配列
+
+static MODE1:Number
+	コンストラクタに渡すMODE1のID
+
+static MODE2:Number
+	コンストラクタに渡すMODE2のID
+
+static MODE3:Number
+	コンストラクタに渡すMODE3のID
+
+static MODE4:Number
+	コンストラクタに渡すMODE4のID
+
+static MODE5:Number
+	コンストラクタに渡すMODE5のID
+
+static MODE6:Number
+	コンストラクタに渡すMODE6のID
+
+nextTask:Function
+nextTask:GainerCommand
+nextTask:SynchronizedGC
+nextTask:Sleep
+	コマンドキューの最後に追加する処理
+	後述のenqueue()を代入文で記述しやすくしたもの
+
+
+********************************************************************
+*Method
+********************************************************************
+
+reboot():Void
+	再起動
+
+setVerbose(verbose:Boolean):Void
+	おしゃべりモードをセットする
+
+getVerbose():Boolean
+	おしゃべりモードかどうかチェックする
+
+configuration(mode:Number):Void
+	コンフィグレーション
+	前述のコンストラクタ参照
+
+turnOnLED():Void
+	LED を点灯する "h*"
+
+turnOffLED():Void
+	LED をけす "l*"
+
+peekDigitalInput():Void
+	一度だけデジタルポートの状態をdigitalInput[]に得る 
+
+beginDigitalInput():Void
+	デジタルポートの状態をdigitalInput[]に取得し続ける
+
+endDigitalInput():Void
+	デジタルポートの状態の取得を終了する
+
+digitalOutput(chs:Number):Void
+digitalOutput(values:Array):Void
+	デジタルポートに出力する
+
+setHigh(ch:Number):Void
+setHigh(chs:Array):Void
+	デジタルポートの状態をHighにする
+
+setLow(ch:Number):Void
+setLow(chs:Array):Void
+	デジタルポートの状態をLowにする
+
+peekAnalogInput():Void
+	一度だけアナログポートの状態をanalogInput[]に得る 
+
+beginAnalogInput():Void
+	アナログポートの状態をanalogInput[]に取得し続ける
+
+endAnalogInput():Void
+	アナログポートの状態の取得を終了する
+
+analogOutput(ch:Number, value:Number):Void
+analogOutput(values:Array):Void
+	アナログポートに出力する
+
+write(command:String):Void
+	GAINER serial proxyにcommandをすぐに送信する
+
+enqueue(new GainerCommand(gainer:Gainer, command:String)):Void	
+	コマンドキューの最後にリターンコードを待たないコマンドを追加する
+
+enqueue(new SynchronizedGC(gainer:Gainer, command:String, waitFor:String)):Void
+	コマンドキューの最後にリターンコードを待ってから完了するコマンドを追加する
+
+enqueue(new Sleep(wait:Number)):Void
+	コマンドキューの最後にディレイを追加する
+	後述のsleep()と同じ
+
+enqueue(command:Function):Void
+	コマンドキューの最後に、(GAINERと同期させたい)関数を追加する
+
+getTaskCount():Number
+	コマンドキューに残っているタスクの数を返す
+
+sleep(wait:Number):Void
+	コマンドキューの最後にディレイを追加する
+
+startLog():Void
+	GAINER serial proxyの出力エリアに、通信しているコマンドの内容を表示するようにする
+	
+stopLog():Void
+	GAINER serial proxyの出力エリアに、通信しているコマンドの内容を表示しないようにする
+
+clearLog():Void
+	GAINER serial proxyの出力エリアをクリアする
+
+remap(input:Number, inmin:Number, inmax:Number, outmin:Number, outmax:Number):Number
+	最小値(inmin)/最大値(inmax)が分かっている入力(input)を
+	outminからoutmaxの範囲にスケーリングした値を返す
+
+
+
+********************************************************************
+*Event
+********************************************************************
+
+onReady = function(){}
+	GAINER serial proxyとの接続が成功し、ハードウェアの初期化が終了したら呼び出される
+
+onFinished = function(){}
+	コマンドキューに待機中のすべてのタスクが送信されたら呼び出される
+
+onTimeout = function(command:Object){}
+	リターンコードを待ってから完了するコマンド(SynchronizedGC)が送られたが、
+	timeoutまで待機してもリターンがなかったら呼び出される
+	command:タイムアウトの原因となったコマンド
+
+onReceived = function(msg:String){}
+	GAINER serial proxyからメッセージを受信したら呼び出される
+	msg:サーバーから受信した文字列
+
+onPressed = function(){}
+	GAINERボード上のボタンが押されたとき呼び出される
+
+onReleased = function(){}
+	GAINERボード上のボタンが離されたとき呼び出される
+
+
