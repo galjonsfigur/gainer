@@ -35,7 +35,7 @@ public class Gainer implements SerialPortEventListener {
   
   private boolean WINDOWS = true;
   
-  public final String firmVersion = "1.0.0.15";
+  public final String libVersion = "1.0.0";
   public String deviceVersion;
 
   private int currentMode = 0;
@@ -226,9 +226,10 @@ public class Gainer implements SerialPortEventListener {
 		deviceVersion = sReturn.substring(1,9);
 		System.out.println("Gainer firmware ver. " + deviceVersion);
 		deviceVersion = deviceVersion.substring(0,5);
-		if(!firmVersion.startsWith(deviceVersion) ){
-			throw new RuntimeException("Gainer error!! please check firmware version");
-		}	
+		System.out.println("dev:"+ deviceVersion + " lib:" + libVersion);
+		//if(!libVersion.startsWith(deviceVersion) ){
+		//	throw new RuntimeException("Gainer error!! please check firmware version");
+		//}	
 	}
 
 	private void setVerbose(boolean verb){
@@ -413,60 +414,7 @@ public class Gainer implements SerialPortEventListener {
             	System.out.println("gainer-> " + sReturn);
             }
             
-            if(sReturn.startsWith("i") || sReturn.startsWith("I")){
-            
-            	String value;
-            	
-            	for(int i=0;i<analogInput.length;i++){
-            		value = sReturn.substring(2*i+1,2*(i+1)+1);
-            		analogInput[i] = Integer.parseInt(value,16);
-            	}
-            	
-            }else if(sReturn.startsWith("r") || sReturn.startsWith("R")){
-            	int value = Integer.parseInt(sReturn.substring(1,5),16);
-            	for(int i=0;i<digitalInput.length;i++){
-            		int c = 1&(value>>i);
-            		if(c==1){
-            			digitalInput[i] = true;
-            		}else{
-            			digitalInput[i] = false;
-            		}
-            	}
-            	
-            }else if(sReturn.startsWith("N")){
-              buttonPressed = true;
-            }else if(sReturn.startsWith("F")){
-              buttonPressed = false;
-            }
-/*
-            if(gainerAnalogInEventMethod != null){
-            	if(sReturn.startsWith("i")){
-            		try{
-            			Object[] args = 
-            			gainerAnalogInEventMethod.invoke(parent,new Object[]{new Void()});
-            		}catch(Exception e){
-                  String msg = "error, disabling gainerAnalogInEvent() for " + port;
-                  System.err.println(msg);
-                  e.printStackTrace();
-                  gainerAnalogInEventMethod = null;
-                }
-            	}
-            }
-*/
-            if(gainerButtonEventMethod != null){
-              if(sReturn.startsWith("F") || sReturn.startsWith("N") ){
-                try{
-                  gainerButtonEventMethod.invoke(parent,new Object[]{new Boolean(buttonPressed)});
-                  //System.out.println("make ganerSWEvent "+ buttonPressed);
-                }catch(Exception e){
-                  String msg = "error, disabling gainerSWEvent() for " + port;
-                  System.err.println(msg);
-                  e.printStackTrace();
-                  gainerButtonEventMethod = null;
-                }
-              }
-            }
-            
+            checkReturnCode(sReturn);
             
           }
         }
@@ -739,15 +687,81 @@ public class Gainer implements SerialPortEventListener {
     throw new RuntimeException("Error inside Serial." + where + "()");
   }
 
-	public boolean waitForString(String s){
+	//戻り値のあるやつはそれぞれ判断する
+	private void checkReturnCode(String s){
+	
+            if(s.startsWith("i") || s.startsWith("I")){
+            
+            	String value;
+            	
+            	for(int i=0;i<analogInput.length;i++){
+            		value = s.substring(2*i+1,2*(i+1)+1);
+            		analogInput[i] = Integer.parseInt(value,16);
+            	}
+            	
+            }else if(s.startsWith("r") || s.startsWith("R")){
+            	int value = Integer.parseInt(s.substring(1,5),16);
+            	for(int i=0;i<digitalInput.length;i++){
+            		int c = 1&(value>>i);
+            		if(c==1){
+            			digitalInput[i] = true;
+            		}else{
+            			digitalInput[i] = false;
+            		}
+            	}
+            	
+            }else if(s.startsWith("N")){
+              buttonPressed = true;
+            }else if(sReturn.startsWith("F")){
+              buttonPressed = false;
+            }
+            //これら以外の戻りはおのおのの指定したwaitForで待つ
+/*
+            if(gainerAnalogInEventMethod != null){
+            	if(s.startsWith("i")){
+            		try{
+            			Object[] args = 
+            			gainerAnalogInEventMethod.invoke(parent,new Object[]{new Void()});
+            		}catch(Exception e){
+                  String msg = "error, disabling gainerAnalogInEvent() for " + port;
+                  System.err.println(msg);
+                  e.printStackTrace();
+                  gainerAnalogInEventMethod = null;
+                }
+            	}
+            }
+*/
+            if(gainerButtonEventMethod != null){
+              if(s.startsWith("F") || s.startsWith("N") ){
+                try{
+                  gainerButtonEventMethod.invoke(parent,new Object[]{new Boolean(buttonPressed)});
+                  //System.out.println("make ganerSWEvent "+ buttonPressed);
+                }catch(Exception e){
+                  String msg = "error, disabling gainerSWEvent() for " + port;
+                  System.err.println(msg);
+                  e.printStackTrace();
+                  gainerButtonEventMethod = null;
+                }
+              }
+            }
+	}
+
+	public boolean waitForString(String sRet){
 		int count = TIMEOUT;
 		//
-		while(!sReturn.startsWith(s) && count>0){
+		while(!sReturn.startsWith(sRet) && count>0){
 			count--;
 			if(sReturn.startsWith("!*")){
-				System.out.println("gainer wrong return code error!!" );
+				//System.out.println("gainer wrong return code error!!" );
 				return false;
+			}else{
+			//待ちの間に戻ってきた想定以外の値
+				if(sReturn != ""){
+					checkReturnCode(sReturn);
+					return true;
+				}
 			}
+			
 			try{
 			Thread.sleep(10);
 			}catch(Exception e){
@@ -755,13 +769,11 @@ public class Gainer implements SerialPortEventListener {
 			}
 		}
 		
-		if(!sReturn.startsWith(s)){
-			System.out.print("wait for  " + s + " recv:" + sReturn);
+		if(!sReturn.startsWith(sRet)){
+			System.out.print("wait for  " + sRet + " recv:" + sReturn);
 			System.out.println("   gainer TIMEOUT return code error!!" );
 			return false;
 		}
-		//int t = TIMEOUT-count;
-		//System.out.println("wait for string " + sReturn + " count " + t);
 		return true;
 	}
 	
