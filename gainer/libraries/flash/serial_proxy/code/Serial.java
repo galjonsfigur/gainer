@@ -61,6 +61,8 @@ public class Serial implements SerialPortEventListener {
 					}
 				}
 			}
+			printMsg("specified port was not found...");
+			
 		} catch (Exception e) {
 			printMsg("connection error inside Serial. closing serialport...");
 			e.printStackTrace();

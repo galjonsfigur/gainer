@@ -25,7 +25,7 @@ public class SerialProxy extends Frame {
 		// Windowが閉じられたら
 		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent evt) {
-				gainer.write("E*");
+				if(gainer.port != null)gainer.write("E*");
 				System.exit(0);
 			}
 		});
