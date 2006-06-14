@@ -152,6 +152,11 @@ void Enter_Config_A(void)
 			PRT0DM0 = 0x00;
 			// change select of *in 1~8 to 'Analog'
 			// <nothing to do!?>
+
+			// disconnect *out 5~8 from PWM8 modules
+			// disable global select (disable global bypass)
+			PRT1GS &= ~0x54;	// disconnect P1[2], P1[4] and P1[6] to global bus
+			PRT2GS &= ~0x01;	// disconnect P2[0] to global bus
 			break;
 
 		case CONFIG_3:
@@ -190,6 +195,11 @@ void Enter_Config_A(void)
 			_gainer.bChannels_DIN = 4;
 			_gainer.bChannels_AOUT = 4;
 			_gainer.bChannels_DOUT = 4;
+
+			// disconnect *out 5~8 from PWM8 modules
+			// disable global select (disable global bypass)
+			PRT1GS &= ~0x54;	// disconnect P1[2], P1[4] and P1[6] to global bus
+			PRT2GS &= ~0x01;	// disconnect P2[0] to global bus
 			break;
 	}
 
