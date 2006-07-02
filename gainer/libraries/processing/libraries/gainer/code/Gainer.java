@@ -613,8 +613,8 @@ public class Gainer implements SerialPortEventListener {
     try {
       output.write(bytes);
       //output.flush();   // hmm, not sure if a good idea
-    } catch (Exception e) { // null pointer or serial port dead
-      System.out.println("- exception - please check connecting to gainer");
+    } catch (IOException e) { // null pointer or serial port dead
+      System.out.println("- write error i/o exception - please check connecting to gainer");
       errorMessage("write", e);
       e.printStackTrace();
       
