@@ -39,12 +39,12 @@ class gainer.Analog {
   	public function out(ch:Number,value:Number):Void {
 		if(typeof(ch) == "number") {
 			if(numOutCh>ch){
-				var s:String = "a" + ch.toString(16);
+				var s:String = "a" + ch.toString(16).toUpperCase();
 				value = value<  0 ?   0: value;
 				value = value>255 ? 255: value;
 					
 				var sv:String = value<16 ? "0": "";
-				sv+= value.toString(16);
+				sv+= value.toString(16).toUpperCase();
 				s+=sv;
 				s+="*";
 				_gainer.enqueue(new SynchronizedGC(_gainer, s, "a"));
@@ -61,7 +61,7 @@ class gainer.Analog {
 					values[i] = values[i]<  0 ?   0: values[i];
 					values[i] = values[i]>255 ? 255: values[i];
 					sv = values[i]<16 ? "0": "";
-					sv+= values[i].toString(16);
+					sv+= values[i].toString(16).toUpperCase();
 					s+=sv;
 				}
 			  s+= "*";

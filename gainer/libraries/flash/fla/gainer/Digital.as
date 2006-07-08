@@ -51,7 +51,7 @@ class gainer.Digital {
 			}
 		}
 		if (chs<=0xFFFF) {
-			var val:String = chs.toString(16);
+			var val:String = chs.toString(16).toUpperCase();
 			var sv:String = "";
 			//必ず4桁
 			for (var i = 0; i<4-val.length; i++) {
@@ -71,7 +71,7 @@ class gainer.Digital {
 	public function high(ch):Void {
 		if(typeof(ch) == "number") {
 			if (numOutCh>ch) {
-				var s:String = "H"+ch.toString(16)+"*";
+				var s:String = "H"+ch.toString(16).toUpperCase()+"*";
 				trace(s);
 				_gainer.enqueue(new SynchronizedGC(_gainer, s, "H"));
 			} else {
@@ -86,7 +86,7 @@ class gainer.Digital {
 					trace("Gainer error!! out of bounds digital out");
 				}
 			}
-			var val:String = vch.toString(16);
+			var val:String = vch.toString(16).toUpperCase();
 			var sv:String = "";
 			for (var i = 0; i<numOutCh-val.length; i++) {
 				sv += "0";
@@ -100,7 +100,7 @@ class gainer.Digital {
 	public function low(ch):Void {
 		if(typeof(ch) == "number") {
 			if (numOutCh>ch) {
-				var s:String = "L"+ch.toString(16)+"*";
+				var s:String = "L"+ch.toString(16).toUpperCase()+"*";
 				_gainer.enqueue(new SynchronizedGC(_gainer, s, "L"));
 			} else {
 				trace("Gainer error!! out of bounds digital out");
@@ -119,7 +119,7 @@ class gainer.Digital {
 				}
 			}
 			vch ^= xor;
-			var val:String = vch.toString(16);
+			var val:String = vch.toString(16).toUpperCase();
 			var sv:String = "";
 			for (var i = 0; i<numOutCh-val.length; i++) {
 				sv += "0";
