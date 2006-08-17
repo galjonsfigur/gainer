@@ -1,4 +1,4 @@
-;@Id: boot.tpl#102 @
+;@Id: boot.tpl#103 @
 ;=============================================================================
 ;  FILENAME:   boot.asm
 ;  VERSION:    4.16
@@ -279,6 +279,15 @@ __Start:
     M8C_SetBank1
     mov   reg[VLT_CR], SWITCH_MODE_PUMP_JUST | LVD_TBEN_JUST | TRIP_VOLTAGE_JUST
     M8C_SetBank0
+
+    ; %53%20%46%46% Apply Erratum 001-05137 workaround
+    mov   A, 20h
+    romx
+    mov   A, 40h
+    romx
+    mov   A, 60h
+    romx
+    ; %45%20%46%46% End workaround
 
 IF ( WATCHDOG_ENABLE )             ; WDT selected in Global Params
     M8C_EnableWatchDog
@@ -627,9 +636,11 @@ ENDIF ; 5.0V Operation
     mov  reg[INT_MSK0],0
 
     ; Everything has started OK. Now select requested CPU & sleep frequency.
+    ; And put decimator in full mode so it does not consume too much current.
     ;
     M8C_SetBank1
     mov  reg[OSC_CR0],(SELECT_32K_JUST | PLL_MODE_JUST | SLEEP_TIMER_JUST | CPU_CLOCK_JUST)
+    or   reg[DEC_CR2],80h                    ; Put decimator in full mode
     M8C_SetBank0
 
     ; Global Interrupt are NOT enabled, this should be done in main().
