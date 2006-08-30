@@ -40,6 +40,7 @@ class gainer.Analog {
 		if(typeof(ch) == "number") {
 			if(numOutCh>ch){
 				var s:String = "a" + ch.toString(16).toUpperCase();
+				value = Math.floor(value);
 				value = value<  0 ?   0: value;
 				value = value>255 ? 255: value;
 					
@@ -58,6 +59,7 @@ class gainer.Analog {
 			var sv:String = "";
 			if(numOutCh==values.length){
 				for(var i=0;i<values.length;i++){
+					values[i] = Math.floor(values[i]);
 					values[i] = values[i]<  0 ?   0: values[i];
 					values[i] = values[i]>255 ? 255: values[i];
 					sv = values[i]<16 ? "0": "";

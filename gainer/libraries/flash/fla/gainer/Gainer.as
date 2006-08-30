@@ -15,6 +15,8 @@ class gainer.Gainer extends CommandQueue{
 	
 	public var analogInput:Array;
 	
+	public var currentMode:Number;
+	
 	public static var MODE1:Number = 1;
 	
 	public static var MODE2:Number = 2;
@@ -26,6 +28,8 @@ class gainer.Gainer extends CommandQueue{
 	public static var MODE5:Number = 5;
 	
 	public static var MODE6:Number = 6;
+	
+	public static var MODE7:Number = 7;
 	
 	public var timeout:Number = 1000;
 	
@@ -154,6 +158,13 @@ class gainer.Gainer extends CommandQueue{
 			analog.configuration(0, 0);
 			enqueue(new SynchronizedGC(this, "KONFIGURATION_6*", "KONFIGURATION_6"));
 			break;
+		case MODE7:
+			analogInput = new Array(0);
+			digitalInput = new Array(0);
+			digital.configuration(0,0);
+			analog.configuration(0,0);
+			enqueue(new SynchronizedGC(this, "KONFIGURATION_7*", "KONFIGURATION_7"));
+			break;
 		}
 		enqueue(new Sleep(1000));
 	}
@@ -231,6 +242,71 @@ class gainer.Gainer extends CommandQueue{
 	}
 	public function write(what:String):Void {
 		serial_net.writeString(what);
+	}
+	//mode7のみ
+	//line毎に処理
+	public function scanLine(line:Number,values:Array):Void {
+		if(currentMode==MODE7){
+			var s:String = "a";
+			var sv:String = "";
+			if(values.length == 8){
+				if(line<8){
+					s += line.toString(16).toUpperCase();
+				}else{
+					trace("Gainer error!! out of bounds");
+				}
+				for(var i=0;i<8;i++){
+					sv = values[i]<16 ? "0": "";
+					s += sv;
+					s += values[i].toString(16).toUpperCase();
+				}
+				s += "*";
+				enqueue(new SynchronizedGC(this, s, "a"));
+			}else{
+				trace("Gainer error!! number of values");
+			}
+		}else{
+			trace("Gainer error!! this method can use only MODE7");
+		}
+	}
+	//mode7のみ
+	//LEDmatrix全体を処理
+	public function scanMatrix(values:Array):Void {
+		if(currentMode==MODE7){
+			if(values.length == 64){
+				for(var col=0;col<8;col++){
+					var v:Array = new Array(8);
+					for(var i=0;i<8;i++){
+						v[i] = values[col*8+i];
+					}
+					scanLine(col,v);
+				}
+			}
+		}else{
+			trace("Gainer error!! this method can use only MODE7");
+		}
+	}
+	public function ampGainAGND(gain:Number):Void {
+		var s:String ="G";
+	 	if(gain>=0 && gain<16){
+	  		s += gain.toString(16).toUpperCase();
+  			s += "1";
+	 	}else{
+	 		trace("Gainer error!! gain");
+	 	}
+	 	s +="*";
+	 	enqueue(new SynchronizedGC(this, s, "G"));
+	}
+	public function ampGainDGND(gain:Number):Void {
+		var s:String ="G";
+	  	if(gain>=0 && gain<16){
+	   		s += gain.toString(16).toUpperCase();
+	   		s += "0";
+	  	}else{
+	  		trace("Gainer error!! gain");
+	 	}
+	  	s +="*";
+	   	enqueue(new SynchronizedGC(this, s, "G"));
 	}
 	public function startLog():Void {
 		write("startLog");

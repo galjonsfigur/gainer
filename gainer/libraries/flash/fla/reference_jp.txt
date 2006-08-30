@@ -118,6 +118,16 @@ analogOutput(ch:Number, value:Number):Void
 analogOutput(values:Array):Void
 	アナログポートに出力する
 
+ampGainAGND(gain:Number):Void
+	ゲイン　+2.5Vが中心 "G1x"
+
+ampGainDGND(gain:Number):Void
+	ゲイン　0Vが中心  "G0x"
+
+scanLine(line:Number,values:Array):Void
+scanMatrix(values:Array):Void
+	MODE7のみマトリックスLEDのラインに出力する
+
 write(command:String):Void
 	GAINER serial proxyにcommandをすぐに送信する
 
