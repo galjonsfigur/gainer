@@ -35,7 +35,7 @@ public class Gainer implements SerialPortEventListener {
   
   private boolean WINDOWS = true;
   
-  public final String libVersion = "1.0.0";
+  public final String libVersion = "1.0";
   public String deviceVersion;
 
   private int currentMode = 0;
@@ -224,12 +224,11 @@ public class Gainer implements SerialPortEventListener {
 			System.out.println(e);
 		}
 		deviceVersion = sReturn.substring(1,9);
-		System.out.println("Gainer firmware ver. " + deviceVersion);
-		deviceVersion = deviceVersion.substring(0,5);
-		System.out.println("dev:"+ deviceVersion + " lib:" + libVersion);
-		//if(!libVersion.startsWith(deviceVersion) ){
-		//	throw new RuntimeException("Gainer error!! please check firmware version");
-		//}	
+		System.out.println("Gainer firmware ver.   :" + deviceVersion);
+		System.out.println("Processing library ver.:" + libVersion + ".*.*");
+		if(!deviceVersion.startsWith(libVersion) ){
+			throw new RuntimeException("Gainer error!! please check firmware version");
+		}	
 	}
 
 	private void setVerbose(boolean verb){
