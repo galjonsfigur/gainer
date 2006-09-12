@@ -166,6 +166,7 @@ class gainer.Gainer extends CommandQueue{
 			enqueue(new SynchronizedGC(this, "KONFIGURATION_7*", "KONFIGURATION_7"));
 			break;
 		}
+		currentMode = mode;
 		enqueue(new Sleep(1000));
 	}
 	
@@ -246,7 +247,7 @@ class gainer.Gainer extends CommandQueue{
 	//mode7のみ
 	//line毎に処理
 	public function scanLine(line:Number,values:Array):Void {
-		if(currentMode==MODE7){
+		if(currentMode==Gainer.MODE7){
 			var s:String = "a";
 			var sv:String = "";
 			if(values.length == 8){
@@ -272,7 +273,7 @@ class gainer.Gainer extends CommandQueue{
 	//mode7のみ
 	//LEDmatrix全体を処理
 	public function scanMatrix(values:Array):Void {
-		if(currentMode==MODE7){
+		if(currentMode==Gainer.MODE7){
 			if(values.length == 64){
 				for(var col=0;col<8;col++){
 					var v:Array = new Array(8);
