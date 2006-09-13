@@ -13,6 +13,7 @@ void Counter8_C_Service_ISR(void);
  */
 void config_c_handle_commands(void);
 BYTE config_c_command_set_aout_column(char *pCommand);
+BYTE config_c_command_set_aout_all(char *pCommand);
 BYTE config_c_command_reboot(void);
 
 /**
@@ -197,8 +198,12 @@ void config_c_handle_commands(void)
 			UART_CmdReset();
 
 			switch (*_gainer.cLocalRxBuffer) {
-				case 'a':	// set the analog output (anxx)
+				case 'a':	// set the analog output {a}+{n}+{xxxxxxxx}
 					bNumBytes = config_c_command_set_aout_column(_gainer.cLocalRxBuffer);
+					break;
+				
+				case 'A':	// set all analog outputs {A}+{x}
+					bNumBytes = config_c_command_set_aout_all(_gainer.cLocalRxBuffer);
 					break;
 				
 				case 'Q':	// reboot (Q)
@@ -257,6 +262,40 @@ BYTE config_c_command_set_aout_column(char *pCommand)
 
 	return 2;
 }
+
+
+BYTE config_c_command_set_aout_all(char *pCommand)
+{
+	BYTE row = 0;
+	BYTE column = 0;
+	BYTE value = 0;
+
+	// {a}{0:0..F} = {1} + {1} = 2 bytes
+	if (2 != _gainer.bCommandLength) {
+		PutErrorStringToReplyBuffer();
+		return 2;
+	}
+
+	pCommand++;
+	value = bLightTable[HEX_TO_BYTE(*pCommand)];
+
+	for (row = 0; row < 8; row++) {
+		for (column = 0; column < 8; column++) {
+			// convert 4bit linear value to 8bit value via a special curve
+			_c.bData[row][column] = value;
+		}
+	}
+
+	if (!_gainer.bVerboseMode) {
+		return 0;
+	}
+
+	_gainer.cReplyBuffer[0] = 'A';
+	_gainer.cReplyBuffer[1] = '*';
+
+	return 2;
+}
+
 
 BYTE config_c_command_reboot(void)
 {

@@ -58,6 +58,9 @@ BYTE command_set_mode(char *pCommand);
 
 BYTE command_reboot_a(void);
 
+// experimental
+BYTE command_get_din_notify(char *pCommand);
+
 BOOL set_aout(BYTE channel, BYTE value);
 BOOL set_dout(BYTE channel, WORD value);
 void send_ain_values(void);
@@ -66,6 +69,8 @@ void send_din_values(void);
 void init_output_ports(void);
 
 void prepare_ain_values(void);
+
+BYTE get_din_values(void);
 
 /**
  * private variables of CONFIG_A
@@ -106,6 +111,8 @@ typedef struct {
 	BOOL bButtonIsOn;
 	BOOL bWaitingForADC;
 	BOOL bScanFirstChannelOnly;
+	BYTE bLastDinValues;
+	BOOL bNotifyWhenChanged;
 } config_a_parameters;
 
 config_a_parameters _a;
@@ -137,6 +144,8 @@ void Enter_Config_A(void)
 
 	_a.bWaitingForADC = FALSE;
 	_a.bScanFirstChannelOnly = FALSE;
+
+	_a.bNotifyWhenChanged = FALSE;
 
 	switch (_gainer.bCurrentConfig) {
 		case CONFIG_2:
@@ -304,6 +313,7 @@ void Main_Config_A(void)
 void handle_ain_event(void)
 {
 	BYTE i = 0;
+	BYTE bDinValues;
 
 	if (!_a.bWaitingForADC) {	
 		AMUX4_A_1_InputSelect(_a.bAdcChannelNumber);	// ain 0~3
@@ -369,7 +379,18 @@ void handle_ain_event(void)
 
 		// send din data here to avaiod stupid sending
 		if (_gainer.bContinuousDinRequested) {
-			send_din_values();
+			if (_a.bNotifyWhenChanged == TRUE) {
+				bDinValues = get_din_values();
+
+				// notify din values when changed
+				if (_a.bLastDinValues != bDinValues) {
+					send_din_values();
+				}
+				_a.bLastDinValues = bDinValues;
+			} else {
+				// send din values everytime
+				send_din_values();
+			}
 		}
 	}
 }
@@ -479,6 +500,10 @@ void handle_commands_config_a(void)
 					bNumBytes = command_reboot_a();
 					break;
 				
+				case 'n':	// notify when changed (experimental)
+					bNumBytes = command_get_din_notify(_gainer.cLocalRxBuffer);
+					break;
+
 				default:
 					// seems to be an invalid command
 					PutErrorStringToReplyBuffer();
@@ -1047,4 +1072,39 @@ void prepare_ain_values(void)
 		_a.bAnalogInputMax[i] = 0x00;
 		_a.bAnalogInputMin[i] = 0xFF;
 	}
+}
+
+
+BYTE command_get_din_notify(char *pCommand)
+{
+	if (1 != _gainer.bCommandLength) {
+		PutErrorStringToReplyBuffer();
+		return 2;
+	}
+
+	if (_gainer.bChannels_DIN < 1) {
+		PutErrorStringToReplyBuffer();
+		return 2;
+	}
+
+	_a.bLastDinValues = get_din_values();
+	_gainer.bContinuousDinRequested = TRUE;
+	_a.bNotifyWhenChanged = TRUE;
+
+	return 0;
+}
+
+
+BYTE get_din_values(void)
+{
+	BYTE value = 0x00;
+
+	if (4 == _gainer.bChannels_DIN) {
+		value += A_GET_DIN_1() ? 0x01 : 0x00;
+		value += A_GET_DIN_2() ? 0x02 : 0x00;
+		value += A_GET_DIN_3() ? 0x04 : 0x00;
+		value += A_GET_DIN_4() ? 0x08 : 0x00;
+	}
+
+	return value;
 }
