@@ -257,8 +257,8 @@ class gainer.Gainer extends CommandQueue{
 					trace("Gainer error!! out of bounds");
 				}
 				for(var i=0;i<8;i++){
-					sv = values[i]<16 ? "0": "";
-					s += sv;
+					if(values[i]<0)values[i] = 0;
+					else if(values[i]>15)values[i]=15;
 					s += values[i].toString(16).toUpperCase();
 				}
 				s += "*";
