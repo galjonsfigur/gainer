@@ -11,4 +11,4 @@ LMM=1
 SYS_INC_CONTENTS:=SYSTEM_STACK_PAGE:_equ_7 SYSTEM_STACK_BASE_ADDR:_equ_0h SYSTEM_LARGE_MEMORY_MODEL:_equ_1 SYSTEM_SMALL_MEMORY_MODEL:_equ_0 
 SYSTEM_TOOLS=1
 CSFLOW=
-CONFIG_NAMES=gainer config_a config_b config_c config_d 
+CONFIG_NAMES=common ain_adc ain_capsense aout_prspwm_a aout_prspwm_b aout_servo_a aout_servo_b 
