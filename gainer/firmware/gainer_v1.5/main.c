@@ -28,78 +28,64 @@
 #include "gainer_api.h"
 #include "custom.h"		// custom user code
 
-//global_parameters _gainer;
-
 /**
  * private functions of CONFIG_START
  */
 const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
-const char cVersionString[] = {'1','.','0','.','1','.','0','2'};
-/*
-void handle_commands_config_start(void);
-BYTE handle_config_command(char *pCommand);
-BYTE command_reboot(void);
-BYTE command_verbose(char *pCommand);
-BYTE command_version(char *pCommand);
-void init_global_parameters(void);
-void change_configuration(BYTE from, BYTE to);
-*/
+const char cVersionString[] = {'1','.','5','.','0','.','0','0'};
 
 void main()
 {
-/*
-	_gainer.bCurrentConfig = CONFIG_START;
-	_gainer.bRequestedConfig = CONFIG_START;
+	M8C_EnableGInt;
 
-	Enter_Config_Start();	// enter CONFIG_START
+	UART_IntCntl(UART_ENABLE_RX_INT);
+	UART_Start(UART_PARITY_NONE);
 
-	while (TRUE) {
-		while (!_gainer.bQuitRequested) {
-			_gainer.pMainFunction();
-		}
+	Initialize();
 
-		// Change configuration if needed.
-		if (CONFIG_START == _gainer.bCurrentConfig) {
-			// We don't have to do reboot, so just clear the quit-requested flag.
-			_gainer.bQuitRequested = FALSE;
-		} else {
-			_gainer.bRequestedConfig = CONFIG_START;
-			change_configuration(_gainer.bCurrentConfig, _gainer.bRequestedConfig);
-		}
-	}
-*/
-/*
-	// set port modes for all pins
+	// set port mode for all pins
 	// configurations will be loaded automatically to place and init user modules
-	SetPortMode(PORT_00, AIN_NORMAL);
-	SetPortMode(PORT_01, AIN_NORMAL);
-	SetPortMode(PORT_02, AIN_NORMAL);
-	SetPortMode(PORT_03, AIN_NORMAL);
-	SetPortMode(PORT_04, DIN_PULL_DOWN);
-	SetPortMode(PORT_05, DIN_PULL_DOWN);
-	SetPortMode(PORT_06, DIN_PULL_DOWN);
-	SetPortMode(PORT_07, DIN_PULL_DOWN);
-	SetPortMode(PORT_08, AOUT_PRSPWM);
-	SetPortMode(PORT_09, AOUT_PRSPWM);
-	SetPortMode(PORT_10, AOUT_PRSPWM);
-	SetPortMode(PORT_11, AOUT_PRSPWM);
-	SetPortMode(PORT_12, DOUT_STRONG);
-	SetPortMode(PORT_13, DOUT_STRONG);
-	SetPortMode(PORT_14, DOUT_STRONG);
-	SetPortMode(PORT_15, DOUT_STRONG);
+	SetPortMode(0, AIN_ADC);
+	SetPortMode(1, AIN_ADC);
+	SetPortMode(2, AIN_ADC);
+	SetPortMode(3, AIN_ADC);
+	SetPortMode(4, DIN_PULL_DOWN);
+	SetPortMode(5, DIN_PULL_DOWN);
+	SetPortMode(6, DIN_PULL_DOWN);
+	SetPortMode(7, DIN_PULL_DOWN);
+	SetPortMode(8, AOUT_PSEUDO_ANALOG);
+	SetPortMode(9, AOUT_PSEUDO_ANALOG);
+	SetPortMode(10, AOUT_PSEUDO_ANALOG);
+	SetPortMode(11, AOUT_PSEUDO_ANALOG);
+	SetPortMode(12, AOUT_SERVO);
+	SetPortMode(13, AOUT_SERVO);
+	SetPortMode(14, AOUT_SERVO);
+	SetPortMode(15, AOUT_SERVO);
 	SetPortMode(PORT_BUTTON, DIN_PULL_DOWN);
 	SetPortMode(PORT_LED, DOUT_STRONG);
+
+#if 1
+	// set initial values (just for testing)
+	AnalogWrite(8, 0);
+	AnalogWrite(9, 64);
+	AnalogWrite(10, 128);
+	AnalogWrite(11, 255);
+	AnalogWrite(12, 0);
+	AnalogWrite(13, 64);
+	AnalogWrite(14, 128);
+	AnalogWrite(15, 255);
+#endif
 
     // Custom initization code.
     CustomInit();
     // End Initialize Project
 
-	while (TRUE) {
+	while (1) {
 		// Sync loop sample rate
 		SyncWait();
 
 		// update input variables
-		UpdateInputs();
+		ScanInputs();
 
 		// Custom Post Input function
 		CustomPostInputUpdate();
@@ -109,9 +95,5 @@ void main()
 
 		// CustomPreOutputUpdate();
 		CustomPreOutputUpdate();
-
-		// set outputs
-		UpdateOutputs();
 	}
-*/
 }

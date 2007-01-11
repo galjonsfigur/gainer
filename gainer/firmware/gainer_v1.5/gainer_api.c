@@ -1,6 +1,12 @@
 #include <m8c.h>        // part specific constants and macros
+#include <string.h>        // for memcpy
 #include "PSoCAPI.h"    // PSoC API definitions for all User Modules
+#include "psocdynamic.h"
 #include "gainer_api.h"
+
+#define MIN(A,B)	(((A)<(B))?(A):(B))
+#define MAX(A,B)	(((A)>(B))?(A):(B))
+#define ABS(X)		(((X)>0x80)?((X)-0x80):(0x80-(X)))	// NOTE: valid for BYTE only
 
 /*
  * PSoC port drive mode definitions
@@ -15,6 +21,10 @@ enum {
 	OPEN_DRAIN_LOW
 };
 
+/*
+ * The array to store port mode.
+ * @see 
+ */
 static BYTE gPortMode[18] = {
 	NOT_INITIALIZED,	// PORT 0
 	NOT_INITIALIZED,	// PORT 1
@@ -36,24 +46,27 @@ static BYTE gPortMode[18] = {
 	NOT_INITIALIZED		// PORT 17 (LED)
 };
 
+/*
+ * The array to store values of each port.
+ */
 static BYTE gPortValue[18] = {
 	0, 0, 0, 0, 0, 0, 0, 0,	// port 0-7
 	0, 0, 0, 0, 0, 0, 0, 0,	// port 8-15
 	0, 0					// port 16 (Button), port 17 (LED)
 };
 
+/*
+ * Shadow registers for ports from 0 to 2.
+ */
 static BYTE gPort0Shadow = 0x00;
 static BYTE gPort1Shadow = 0x00;
 static BYTE gPort2Shadow = 0x00;
 
 #include "gainer_ports.h"
 
-static BOOL gVerboseMode = FALSE;
-static char cReplyBuffer[32];
-static BYTE bGetAinChannelMask = 0x00;
-static char cLocalRxBuffer[128];
-static BYTE bCommandLength = 0;
-
+/*
+ * The array to convert from a port number to the pin number
+ */
 const BYTE pinForPort[18] = {
 	7,	// 00: P0[7]
 	5,	// 01: P0[5]
@@ -74,6 +87,66 @@ const BYTE pinForPort[18] = {
 	5,	// 16: P1[5]
 	7	// 17: P1[7]
 };
+
+const BYTE bGainTable[16] = {
+	PGA_A_1_G1_00,	// G0x
+	PGA_A_1_G1_14,	// G1x
+	PGA_A_1_G1_33,	// G2x
+	PGA_A_1_G1_46,	// G3x
+	PGA_A_1_G1_60,	// G4x
+	PGA_A_1_G1_78,	// G5x
+	PGA_A_1_G2_00,	// G6x
+	PGA_A_1_G2_27,	// G7x
+	PGA_A_1_G2_67,	// G8x
+	PGA_A_1_G3_20,	// G9x
+	PGA_A_1_G4_00,	// GAx
+	PGA_A_1_G5_33,	// GBx
+	PGA_A_1_G8_00,	// GCx
+	PGA_A_1_G16_0,	// GDx
+	PGA_A_1_G24_0,	// GEx
+	PGA_A_1_G48_0,	// GFx
+};
+
+enum {
+	PGA_REFERENCE_VSS,
+	PGA_REFERENCE_AGND
+};
+
+
+/*
+ * Global variables.
+ */
+static BOOL gVerboseMode = FALSE;
+static char gReplyBuffer[32];
+static BYTE gPortScanMask = 0x00;
+static BYTE gPortScanNumber[2][4];
+static BYTE gPortScanLength[2];
+static BYTE gAnalogInputMin[AIN_PORT_MAX + 1];
+static BYTE gAnalogInputMax[AIN_PORT_MAX + 1];
+static BYTE gPgaReference = PGA_REFERENCE_VSS;
+
+
+/*
+ * Prototypes for local functions (i.e. not user functions)
+ */
+void set_drive_mode_registers(BYTE port, BYTE v2, BYTE v1, BYTE v0);
+BOOL set_port_drive_mode(BYTE port, BYTE mode);
+BOOL is_valid_port_number(BYTE port, BYTE mode);
+void configure_port_din(BYTE port, BYTE mode);
+void configure_port_dout(BYTE port, BYTE mode);
+void configure_port_capsense(BYTE port, BYTE mode);
+void configure_port_prspwm(BYTE port, BYTE mode);
+void configure_port_servo(BYTE port, BYTE mode);
+void connect_port_to_bus(BYTE port);
+void disconnect_port_from_bus(BYTE port);
+char calc_checksum(char *p, BYTE length);
+void handle_port_mode_command(char *p, BYTE length);
+void handle_write_command(char *p, BYTE length);
+void handle_read_command(char *p, BYTE length);
+void handle_quit_command(char *p, BYTE length);
+void handle_configuration_command(char *p, BYTE length);
+BYTE put_error_string_to_reply_buffer(void);
+void update_port_scan_info(void);
 
 void set_drive_mode_registers(BYTE port, BYTE v2, BYTE v1, BYTE v0)
 {
@@ -150,10 +223,10 @@ BOOL set_port_drive_mode(BYTE port, BYTE mode)
 BOOL is_valid_port_number(BYTE port, BYTE mode)
 {
 	switch (mode) {
-		case AIN_NORMAL:
-		case AIN_LPF:
-		case AIN_HPF:
-		case AIN_PEAK_HOLD:
+		case AIN_ADC:
+		case AIN_ADC_LPF:
+		case AIN_ADC_HPF:
+		case AIN_ADC_PEAK_HOLD:
 			return (port <= AIN_PORT_MAX);
 			break;
 
@@ -161,7 +234,7 @@ BOOL is_valid_port_number(BYTE port, BYTE mode)
 			return (port <= AIN_PORT_MAX);
 			break;
 
-		case AOUT_PRSPWM:
+		case AOUT_PSEUDO_ANALOG:
 			return ((AOUT_PORT_MIN <= port) && (port <= AOUT_PORT_MAX));
 			break;
 
@@ -176,8 +249,111 @@ BOOL is_valid_port_number(BYTE port, BYTE mode)
 	return FALSE;
 }
 
+void connect_port_to_bus(BYTE port)
+{
+	switch (port) {
+		case 8:
+			// connect P2[1] to the global bus
+			PRT2GS |= PIN_1;
+			break;
+
+		case 9:
+			// connect P2[3] to the global bus
+			PRT2GS |= PIN_3;
+			break;
+
+		case 10:
+			// connect P2[5] to the global bus
+			PRT2GS |= PIN_5;
+			break;
+
+		case 11:
+			// connect P2[7] to the global bus
+			PRT2GS |= PIN_7;
+			break;
+
+		case 12:
+			// connect P1[2] to the global bus
+			PRT1GS |= PIN_2;
+			break;
+
+		case 13:
+			// connect P1[4] to the global bus
+			PRT1GS |= PIN_4;
+			break;
+
+		case 14:
+			// connect P1[6] to the global bus
+			PRT1GS |= PIN_6;
+			break;
+
+		case 15:
+			// connect P2[0] to the global bus
+			PRT2GS |= PIN_0;
+			break;
+
+		default:
+			// NO ACTION
+			break;
+	}	
+}
+
+void disconnect_port_from_bus(BYTE port)
+{
+	switch (port) {
+		case 8:
+			// disconnect P2[1] from the global bus
+			PRT2GS &= ~PIN_1;
+			break;
+
+		case 9:
+			// disconnect P2[3] from the global bus
+			PRT2GS &= ~PIN_3;
+			break;
+
+		case 10:
+			// disconnect P2[5] from the global bus
+			PRT2GS &= ~PIN_5;
+			break;
+
+		case 11:
+			// disconnect P2[7] from the global bus
+			PRT2GS &= ~PIN_7;
+			break;
+
+		case 12:
+			// disconnect P1[2] from the global bus
+			PRT1GS &= ~PIN_2;
+			break;
+
+		case 13:
+			// disconnect P1[4] from the global bus
+			PRT1GS &= ~PIN_4;
+			break;
+
+		case 14:
+			// disconnect P1[6] from the global bus
+			PRT1GS &= ~PIN_6;
+			break;
+
+		case 15:
+			// disconnect P2[0] from the global bus
+			PRT2GS &= ~PIN_0;
+			break;
+
+		default:
+			// NO ACTION
+			break;
+	}
+}
+
 void configure_port_din(BYTE port, BYTE mode)
 {
+	// disconnect a module from an output if needed
+	if ((gPortMode[port] == AOUT_PSEUDO_ANALOG) || (gPortMode[port] == AOUT_SERVO)) {
+		disconnect_port_from_bus(port);
+	}
+
 	switch (mode) {
 		case DIN_HIGH_Z:
 			// configure the pin mode for the port to 'High Z'
@@ -197,10 +373,31 @@ void configure_port_din(BYTE port, BYTE mode)
 		default:
 			break;
 	}
+
+	switch (gPortMode[port]) {
+		case AIN_ADC:
+		case AIN_ADC_LPF:
+		case AIN_ADC_HPF:
+		case AIN_ADC_PEAK_HOLD:
+		case AIN_CAPSENSE:
+			gPortScanMask &= ~(0x01 << port);
+			update_port_scan_info();
+			break;
+
+		default:
+			break;
+	}
+
+	gPortMode[port] = mode;
 }
 
 void configure_port_dout(BYTE port, BYTE mode)
 {
+	// disconnect a module from an output if needed
+	if ((gPortMode[port] == AOUT_PSEUDO_ANALOG) || (gPortMode[port] == AOUT_SERVO)) {
+		disconnect_port_from_bus(port);
+	}
+
 	switch (mode) {
 		case DOUT_STRONG:
 			// configure the pin mode for the port to 'Strong'
@@ -220,6 +417,22 @@ void configure_port_dout(BYTE port, BYTE mode)
 		default:
 			break;
 	}
+
+	switch (gPortMode[port]) {
+		case AIN_ADC:
+		case AIN_ADC_LPF:
+		case AIN_ADC_HPF:
+		case AIN_ADC_PEAK_HOLD:
+		case AIN_CAPSENSE:
+			gPortScanMask &= ~(0x01 << port); 
+			update_port_scan_info();
+			break;
+
+		default:
+			break;
+	}
+
+	gPortMode[port] = mode;
 }
 
 void configure_port_adc(BYTE port, BYTE mode)
@@ -227,81 +440,254 @@ void configure_port_adc(BYTE port, BYTE mode)
 	// load the configuration if needed
 	if (!Isain_adcLoaded()) {
 		LoadConfig_ain_adc();
+
+		// start modules
+		AMUX4_A_1_Start();
+		AMUX4_A_2_Start();
+		PGA_A_1_SetGain(bGainTable[0]);
+		PGA_A_2_SetGain(bGainTable[0]);
+		PGA_A_1_Start(PGA_A_1_LOWPOWER);		// see the module datasheet
+		PGA_A_2_Start(PGA_A_2_LOWPOWER);		// might be good lpf!?
+		DUALADC_A_Start(DUALADC_A_HIGHPOWER);	// try lower power later
 	}
 
 	// configure the pin mode for the port to 'High Z Analog'
 	set_port_drive_mode(port, HIGH_Z_ANALOG);
 
 	// enable port scan for the port
+	gPortScanMask |= (0x01 << port);
 
 	// enable specified port function
 	switch (mode) {
-		case AIN_NORMAL:
+		case AIN_ADC:
 			break;
 
-		case AIN_LPF:
+		case AIN_ADC_LPF:
 			// enable LPF for the port
 			break;
 
-		case AIN_HPF:
+		case AIN_ADC_HPF:
 			// enable HPF for the port
 			break;
 
-		case AIN_PEAK_HOLD:
+		case AIN_ADC_PEAK_HOLD:
 			// enable peak hold for the port
 			break;
 
 		default:
 			break;
 	}
+
+	gPortMode[port] = mode;
 }
 
-void configure_port_capsense(BYTE number, BYTE mode)
+void configure_port_capsense(BYTE port, BYTE mode)
 {
 	// load the configuration if needed
 	if (!Isain_capsenseLoaded()) {
 		LoadConfig_ain_capsense();
+
+		AMUX4_D_Start();
+//		AMUX4_D_InputSelect(_d.bInputNumber);
+
+		CMPPRG_D_Start(CMPPRG_D_HIGHPOWER);
+		Timer8_D_Start();
+		Timer16_D_Start();
+		Timer16_D_EnableInt();
 	}
 
 	// configure the pin mode for the port to 'High Z Analog'
-	set_port_drive_mode(number, HIGH_Z_ANALOG);
+	set_port_drive_mode(port, HIGH_Z_ANALOG);
 
 	// enable port scan for the port
+	gPortScanMask |= (0x01 << port);
 
+	gPortMode[port] = mode;
 }
 
-void configure_port_prspwm(BYTE number, BYTE mode)
+#define bPOLY_255 0xB8	// Modular Polynomial = [8,6,5,4]
+#define	bSEED_255 0xFF	// initial seed value
+#define	bSEED_000 0x00	// initial seed value
+
+void configure_port_prspwm(BYTE port, BYTE mode)
 {
 	// load the configuration if needed
-	if (number < 12) {
+	if (port < 12) {
 		if (!Isaout_prspwm_aLoaded()) {
 			LoadConfig_aout_prspwm_a();
+
+			// configure modules
+			PRS8_0_WritePolynomial(bPOLY_255);
+			PRS8_1_WritePolynomial(bPOLY_255);
+			PRS8_2_WritePolynomial(bPOLY_255);
+			PRS8_3_WritePolynomial(bPOLY_255);
+			
+			// write initial seed values
+			PRS8_0_WriteSeed(bSEED_000);
+			PRS8_1_WriteSeed(bSEED_000);
+			PRS8_2_WriteSeed(bSEED_000);
+			PRS8_3_WriteSeed(bSEED_000);
+			
+			// start PRS8 modules
+			PRS8_0_Start();
+			PRS8_1_Start();
+			PRS8_2_Start();
+			PRS8_3_Start();
 		}
 	} else {
 		if (!Isaout_prspwm_bLoaded()) {
 			LoadConfig_aout_prspwm_b();
+
+			// configure modules
+			PRS8_4_WritePolynomial(bPOLY_255);
+			PRS8_5_WritePolynomial(bPOLY_255);
+			PRS8_6_WritePolynomial(bPOLY_255);
+			PRS8_7_WritePolynomial(bPOLY_255);
+			
+			// write initial seed values
+			PRS8_4_WriteSeed(bSEED_000);
+			PRS8_5_WriteSeed(bSEED_000);
+			PRS8_6_WriteSeed(bSEED_000);
+			PRS8_7_WriteSeed(bSEED_000);
+			
+			// start PRS8 modules
+			PRS8_4_Start();
+			PRS8_5_Start();
+			PRS8_6_Start();
+			PRS8_7_Start();
 		}
 	}
 
+	// connect a PRSPWM8 module to an output if needed
+	if ((gPortMode[port] != AOUT_PSEUDO_ANALOG) && (gPortMode[port] != AOUT_SERVO)) {
+		connect_port_to_bus(port);
+	}
+
 	// configure the pin mode for the port to 'Strong'
-	set_port_drive_mode(number, STRONG);
+	set_port_drive_mode(port, STRONG);
+
+	gPortMode[port] = mode;
 }
 
-void configure_port_servo(BYTE number, BYTE mode)
+void configure_port_servo(BYTE port, BYTE mode)
 {
 	// load the configuration if needed
-	if (number < 12) {
+	if (port < 12) {
 		if (!Isaout_servo_aLoaded()) {
 			LoadConfig_aout_servo_a();
+
+			// configure modules
+			Counter8_0_WritePeriod(255);
+			Counter8_1_WritePeriod(255);
+			Counter8_2_WritePeriod(255);
+			Counter8_3_WritePeriod(255);
+
+			Counter8_0_WriteCompareValue(0);
+			Counter8_1_WriteCompareValue(0);
+			Counter8_2_WriteCompareValue(0);
+			Counter8_3_WriteCompareValue(0);
+
+			// start Counter8 modules
+			Counter8_0_Start();
+			Counter8_1_Start();
+			Counter8_2_Start();
+			Counter8_3_Start();
 		}
 	} else {
 		if (!Isaout_servo_bLoaded()) {
 			LoadConfig_aout_servo_b();
+
+			// configure modules
+			Counter8_4_WritePeriod(255);
+			Counter8_5_WritePeriod(255);
+			Counter8_6_WritePeriod(255);
+			Counter8_7_WritePeriod(255);
+
+			Counter8_4_WriteCompareValue(0);
+			Counter8_5_WriteCompareValue(0);
+			Counter8_6_WriteCompareValue(0);
+			Counter8_7_WriteCompareValue(0);
+
+			// start Counter8 modules
+			Counter8_4_Start();
+			Counter8_5_Start();
+			Counter8_6_Start();
+			Counter8_7_Start();
 		}
 	}
 
+	// connect a Counter8 module to an output if needed
+	if ((gPortMode[port] != AOUT_PSEUDO_ANALOG) && (gPortMode[port] != AOUT_SERVO)) {
+		connect_port_to_bus(port);
+	}
+
 	// configure the pin mode for the port to 'Strong'
-	set_port_drive_mode(number, STRONG);
+	set_port_drive_mode(port, STRONG);
+
+	gPortMode[port] = mode;
+}
+
+char calc_checksum(char *p, BYTE length)
+{
+	// NOT IMPLEMENTED!!!
+	return 0;
+}
+
+
+void handle_port_mode_command(char *p, BYTE length)
+{
+	// calc checksum, then compare
+
+	// NOT IMPLEMENTED
+}
+
+void handle_write_command(char *p, BYTE length)
+{
+	// NOT IMPLEMENTED
+}
+
+void handle_read_command(char *p, BYTE length)
+{
+	// NOT IMPLEMENTED
+}
+
+void handle_quit_command(char *p, BYTE length)
+{
+	// calc checksum, then compare
+
+	// NOT IMPLEMENTED
+}
+
+void handle_configuration_command(char *p, BYTE length)
+{
+	// calc checksum, then compare
+
+	// NOT IMPLEMENTED
+}
+
+BYTE put_error_string_to_reply_buffer(void)
+{
+	return 2;
+}
+
+void update_port_scan_info(void)
+{
+	BYTE i = 0;
+	BYTE j = 0;
+	BYTE k = 0;
+	BYTE length = 0;
+
+	for(k = 0; k < 2; k++) {
+		for (i = 0; i < 4; i++) {
+			if ((gPortScanMask & (0x01 << i)) != 0) {
+				gPortScanNumber[k][j] = i;
+				j++;
+				length++;
+			}	
+		}
+	
+		gPortScanLength[k] = length;
+	}
 }
 
 void SyncWait(void)
@@ -311,12 +697,85 @@ void SyncWait(void)
 
 void ScanInputs(void)
 {
+	static BYTE bWaitingForADC = FALSE;
+	static BYTE bCounter[2] = {0, 0};
+	static BYTE bAdcFlags[2] = {0x00, 0x00};
+	static WORD wAdcValue[8];
 
+	BYTE i = 0;
+	BYTE j = 0;	
+	BYTE bDinValues;
+	BYTE port = 0;
+	BYTE a = 0;
+	BYTE b = 0;
+
+	if (!bWaitingForADC) {	
+		AMUX4_A_1_InputSelect(gPortScanNumber[0][bCounter[0]]);	// ain 0~3
+		AMUX4_A_2_InputSelect(gPortScanNumber[1][bCounter[1]]);	// ain 4~7
+		DUALADC_A_GetSamples(1);	// get one sample
+		bWaitingForADC = TRUE;	// set the flag to let CPU do other tasks
+									// DO NOT KEEP WAITING HERE!!
+		return;
+	} else {
+		// it seems that we are waiting for a data is available
+		if (DUALADC_A_fIsDataAvailable() == 0) {
+			// it seems that a data is not available
+			return;
+		} else {
+			// it seems that a data is available
+			// clear the flag and let's process the data
+			bWaitingForADC = FALSE;
+		}
+	}
+
+	wAdcValue[gPortScanNumber[0][bCounter[0]]] = DUALADC_A_iGetData1();				// port 0~3
+	wAdcValue[gPortScanNumber[1][bCounter[1]]] = DUALADC_A_iGetData2ClearFlag();	// port 4~7
+
+	for (j = 0; j < 2; j++) {
+		bCounter[j]++;
+		if (bCounter[j] >= gPortScanLength[j]) {
+			bCounter[j] = 0;
+			bAdcFlags[j] |= 0x01;
+		}
+	}
+
+	for (j = 0; j < 2; j++) {
+		if ((bAdcFlags[j] & 0x01) == 0) {
+			continue;
+		}
+
+		for (i = 0; i < gPortScanLength[j]; i++) {
+			port = gPortScanNumber[j][bCounter[j]];
+			gPortValue[port] = wAdcValue[port] & 0x00FF;
+
+			if (gPortMode[port] == AIN_ADC_LPF) {
+				// LPF
+			} else if (gPortMode[port] == AIN_ADC_HPF) {
+				// HPF
+			} else if (gPortMode[port] == AIN_ADC_PEAK_HOLD) {
+				gAnalogInputMin[port] = MIN(gAnalogInputMin[port], gPortValue[port]);
+				gAnalogInputMax[port] = MAX(gAnalogInputMax[port], gPortValue[port]);
+
+				if (PGA_REFERENCE_VSS == gPgaReference) {
+						gPortValue[port] = gAnalogInputMax[port];
+				} else {
+					a = gAnalogInputMin[port];
+					b = gAnalogInputMax[port];
+			
+					gPortValue[port] = (ABS(a) > ABS(b)) ? a : b;
+				}
+			}
+		}
+		
+		bAdcFlags[j] &= ~0x01;
+	}
 }
 
 void ProcessCommands(void)
 {
-/*
+	static char cLocalRxBuffer[128];
+	static BYTE bCommandLength = 0;
+
 	char * pCommand;		// Parameter pointer
 	BYTE bNumBytes = 0;
 
@@ -329,101 +788,47 @@ void ProcessCommands(void)
 	if (UART_bCmdCheck()) {				// Wait for command    
 		if (pCommand = UART_szGetParam()) {
 			// copy the command to the local Rx buffer and reset the command buffer ASAP
-			_gainer.bCommandLength = UART_bCmdLength();
-			memcpy(_gainer.cLocalRxBuffer, pCommand, _gainer.bCommandLength);
+			bCommandLength = UART_bCmdLength();
+			memcpy(cLocalRxBuffer, pCommand, bCommandLength);
 			UART_CmdReset();
 
 			// ignore a command if specified command length is zero
-			if (0 == _gainer.bCommandLength) {
+			if (0 == bCommandLength) {
 				return;			
 			}
 
-			switch (*_gainer.cLocalRxBuffer) {
-				case 'D':	// set all digital outputs (Dxx)
-					bNumBytes = command_set_dout_all(_gainer.cLocalRxBuffer);
-					break;
-				
-				case 'H':	// set the digital output high (Hn)
-					bNumBytes = command_set_dout_h(_gainer.cLocalRxBuffer);
-					break;
-				
-				case 'L':	// set the digital output low (Ln)
-					bNumBytes = command_set_dout_l(_gainer.cLocalRxBuffer);
-					break;
-				
-				case 'R':	// get all digital inputs (R)
-					bNumBytes = command_get_din_all(_gainer.cLocalRxBuffer, FALSE);
-					break;
-				
-				case 'r':	// get all digital inputs (continuous) (r)
-					bNumBytes = command_get_din_all(_gainer.cLocalRxBuffer, TRUE);
-					break;
-				
-				case 'A':	// set all analog outputs (Axx...xx)
-					bNumBytes = command_set_aout_all(_gainer.cLocalRxBuffer);
-					break;
-				
-				case 'a':	// set the analog output (anxx)
-					bNumBytes = command_set_aout_ch(_gainer.cLocalRxBuffer);
-					break;
-				
-				case 'I':	// get all analog inputs (I)
-					bNumBytes = command_get_ain_all(_gainer.cLocalRxBuffer, FALSE);
-					break;
-				
-				case 'i':	// get all analog inputs (continuous) (i)
-					bNumBytes = command_get_ain_all(_gainer.cLocalRxBuffer, TRUE);
-					break;
-				
-				case 'S':	// get the analog input (Sn)
-					bNumBytes = command_get_ain_ch(_gainer.cLocalRxBuffer, FALSE);
-					break;
-				
-				case 's':	// get the analog input (continuous) (sn)
-					bNumBytes = command_get_ain_ch(_gainer.cLocalRxBuffer, TRUE);
-					break;
-				
-				case 'E':	// stop continuous sampling
-					bNumBytes = command_stop_cont();
-					break;
-				
-				case 'h':	// set the on-board LED high (h)
-					bNumBytes = command_set_led_h();
-					break;
-				
-				case 'l':	// set the on-board LED low (l)
-					bNumBytes = command_set_led_l();
-					break;
-				
-				case 'G':	// set gain and reference (Gxx)
-					bNumBytes = command_set_gain(_gainer.cLocalRxBuffer);
-					break;
-				
-				case 'M':	// set sampling mode (Mx)
-					bNumBytes = command_set_mode(_gainer.cLocalRxBuffer);
+			switch (*cLocalRxBuffer) {
+				case 'P':
+					handle_port_mode_command(cLocalRxBuffer, bCommandLength);
 					break;
 
-				case 'Q':	// reboot (Q)
-					bNumBytes = command_reboot_a();
+				case 'W':
+					handle_write_command(cLocalRxBuffer, bCommandLength);
 					break;
-				
-				case 'n':	// notify when changed (experimental)
-					bNumBytes = command_get_din_notify(_gainer.cLocalRxBuffer);
+
+				case 'R':
+					handle_read_command(cLocalRxBuffer, bCommandLength);
+					break;
+
+				case 'Q':
+					handle_quit_command(cLocalRxBuffer, bCommandLength);
+					break;
+
+				case 'K':
+					handle_configuration_command(cLocalRxBuffer, bCommandLength);
 					break;
 
 				default:
 					// seems to be an invalid command
-					PutErrorStringToReplyBuffer();
-					bNumBytes = 2;
+					bNumBytes = put_error_string_to_reply_buffer();
 					break;
 			}
 		}
 
 		if (bNumBytes > 0) {
-			UART_Write(_gainer.cReplyBuffer, bNumBytes);
+			UART_Write(gReplyBuffer, bNumBytes);
 		}
 	}
-*/
 }
 
 BOOL DigitalWrite(BYTE port, BYTE value)
@@ -550,7 +955,7 @@ BYTE DigitalRead(BYTE port)
 
 BOOL AnalogWrite(BYTE port, BYTE value)
 {
-	if (gPortMode[port] == AOUT_PRSPWM) {
+	if (gPortMode[port] == AOUT_PSEUDO_ANALOG) {
 		switch (port) {
 			case 8:
 				PRS8_0_WritePolynomial(value);
@@ -627,13 +1032,12 @@ BOOL SetPortMode(BYTE port, GPortMode mode)
 		case DIN_PULL_UP:
 		case DIN_PULL_DOWN:
 			configure_port_din(port, mode);
-			gPortMode[port] = mode;
 			break;
 
-		case AIN_NORMAL:
-		case AIN_LPF:
-		case AIN_HPF:
-		case AIN_PEAK_HOLD:
+		case AIN_ADC:
+		case AIN_ADC_LPF:
+		case AIN_ADC_HPF:
+		case AIN_ADC_PEAK_HOLD:
 			if (!is_valid_port_number(port, mode)) {
 				return FALSE;
 			}
@@ -643,7 +1047,6 @@ BOOL SetPortMode(BYTE port, GPortMode mode)
 			}
 
 			configure_port_adc(port, mode);
-			gPortMode[port] = mode;
 			break;
 
 		case AIN_CAPSENSE:
@@ -656,17 +1059,15 @@ BOOL SetPortMode(BYTE port, GPortMode mode)
 			}
 
 			configure_port_capsense(port, mode);
-			gPortMode[port] = mode;
 			break;
 
 		case DOUT_STRONG:
 		case DOUT_OPEN_DRAIN_HIGH:
 		case DOUT_OPEN_DRAIN_LOW:
 			configure_port_dout(port, mode);
-			gPortMode[port] = mode;
 			break;
 
-		case AOUT_PRSPWM:
+		case AOUT_PSEUDO_ANALOG:
 			if (!is_valid_port_number(port, mode)) {
 				return FALSE;
 			}
@@ -682,7 +1083,6 @@ BOOL SetPortMode(BYTE port, GPortMode mode)
 			}
 
 			configure_port_prspwm(port, mode);
-			gPortMode[port] = mode;
 			break;
 
 		case AOUT_SERVO:
@@ -701,11 +1101,9 @@ BOOL SetPortMode(BYTE port, GPortMode mode)
 			}
 
 			configure_port_servo(port, mode);
-			gPortMode[port] = mode;
 			break;
 
 		default:
-			gPortMode[port] = NOT_INITIALIZED;
 			return FALSE;
 			break;
 	}
@@ -718,7 +1116,72 @@ GPortMode GetPortMode(BYTE port)
 	return gPortMode[port];
 }
 
-void Reboot(void)
+void Initialize(void)
 {
 
+}
+
+void Reboot(void)
+{
+	if (Isain_adcLoaded()) {
+		// stop modules
+		AMUX4_A_1_Stop();
+		AMUX4_A_2_Stop();
+		PGA_A_1_Stop();		// see the module datasheet
+		PGA_A_2_Stop();		// might be good lpf!?
+		DUALADC_A_Stop();	// try lower power later
+
+		UnloadConfig_ain_adc();
+	}
+	
+	if (Isain_capsenseLoaded()) {
+		// stop modules
+		Timer16_D_DisableInt();
+		AMUX4_D_Stop();
+		CMPPRG_D_Stop();
+		Timer8_D_Stop();
+		Timer16_D_Stop();
+	
+		UnloadConfig_ain_capsense();
+	}
+	
+	if (Isaout_prspwm_aLoaded()) {
+		// stop modules
+		PRS8_0_Stop();
+		PRS8_1_Stop();
+		PRS8_2_Stop();
+		PRS8_3_Stop();
+
+		UnloadConfig_aout_prspwm_a();
+	}
+	
+	if (Isaout_prspwm_bLoaded()) {
+		// stop modules
+		PRS8_4_Stop();
+		PRS8_5_Stop();
+		PRS8_6_Stop();
+		PRS8_7_Stop();
+	
+		UnloadConfig_aout_prspwm_b();
+	}
+	
+	if (Isaout_servo_aLoaded()) {
+		// stop modules
+		Counter8_0_Stop();
+		Counter8_1_Stop();
+		Counter8_2_Stop();
+		Counter8_3_Stop();
+	
+		UnloadConfig_aout_servo_a();
+	}
+	
+	if (Isaout_servo_bLoaded()) {
+		// stop modules
+		Counter8_4_Stop();
+		Counter8_5_Stop();
+		Counter8_6_Stop();
+		Counter8_7_Stop();
+	
+		UnloadConfig_aout_servo_b();
+	}
 }
