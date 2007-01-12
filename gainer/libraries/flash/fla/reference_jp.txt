@@ -1,4 +1,4 @@
-﻿********************************************************************
+********************************************************************
 *Constructor
 ********************************************************************
 
@@ -162,9 +162,9 @@ stopLog():Void
 clearLog():Void
 	GAINER serial proxyの出力エリアをクリアする
 
-remap(input:Number, inmin:Number, inmax:Number, outmin:Number, outmax:Number):Number
+Gainer.remap(input:Number, inmin:Number, inmax:Number, outmin:Number, outmax:Number):Number
 	最小値(inmin)/最大値(inmax)が分かっている入力(input)を
-	outminからoutmaxの範囲にスケーリングした値を返す
+	outminからoutmaxの範囲にマッピングした値を返す
 
 
 
