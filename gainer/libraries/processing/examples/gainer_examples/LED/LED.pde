@@ -1,3 +1,6 @@
+/*
+  operate LED on gainer.
+*/
 import processing.gainer.*;
 
 Gainer gainer;

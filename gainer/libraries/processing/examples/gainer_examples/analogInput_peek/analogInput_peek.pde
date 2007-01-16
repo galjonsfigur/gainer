@@ -1,3 +1,7 @@
+/*
+ (One time) peeping to analogInput when mousePressed.
+*/
+
 import processing.gainer.*;
 
 Gainer gainer;

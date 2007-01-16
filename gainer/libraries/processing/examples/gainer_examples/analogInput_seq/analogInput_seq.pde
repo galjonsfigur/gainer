@@ -1,3 +1,7 @@
+/*
+  (sequens) Read to analogInput.
+  and Stop to reading when mousePressed. 
+*/
 import processing.gainer.*;
 
 Gainer gainer;
@@ -9,7 +13,6 @@ void setup() {
   textFont(myFont, 24);
 
   gainer = new Gainer(this);
-  //gainer.analogHighSampling();
 
   gainer.beginAnalogInput(); 
 }

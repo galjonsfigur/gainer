@@ -1,3 +1,8 @@
+
+/*
+(sequens) read to dititalInput.
+ and stop to reading when mousePressed.
+*/
 import processing.gainer.*;
 
 Gainer gainer;

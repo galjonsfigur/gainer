@@ -1,3 +1,7 @@
+/*
+  when buttonPressed on Gainer.
+  (callback Function)
+*/
 import processing.gainer.*;
 
 Gainer gainer;

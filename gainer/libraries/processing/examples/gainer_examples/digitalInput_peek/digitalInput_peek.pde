@@ -1,3 +1,6 @@
+/*
+ (One time) peeping to digitalinput when mousePressed.
+*/
 import processing.gainer.*;
 
 Gainer gainer;
@@ -8,7 +11,7 @@ void setup() {
   myFont = loadFont("CourierNewPSMT-24.vlw");
   textFont(myFont, 24);
 
-  gainer = new Gainer(this, "COM3"); 
+  gainer = new Gainer(this); 
 }
 
 void draw() { 

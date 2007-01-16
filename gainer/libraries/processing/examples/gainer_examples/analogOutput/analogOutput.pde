@@ -1,3 +1,6 @@
+/*
+  anaglogOutput
+*/
 import processing.gainer.*;
 
 Gainer gainer;

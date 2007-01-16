@@ -1,3 +1,7 @@
+/*
+ you can control in two volumes on anaglogInput
+*/
+
 import processing.gainer.*;
 
 
@@ -146,7 +150,7 @@ void setup()
   gainer = new Gainer(this);
   gainer.beginAnalogInput();
   
-  framerate(30);
+  frameRate(30);
 }
 
 

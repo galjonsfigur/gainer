@@ -1,3 +1,6 @@
+/*
+when buttonPressed on Gainer.
+*/
 import processing.gainer.*;
 
 Gainer gainer;
