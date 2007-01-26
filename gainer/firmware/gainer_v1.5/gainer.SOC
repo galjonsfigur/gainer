@@ -20,33 +20,140 @@
 				<SOURCE_FILE NAME="flashapi.asm" TYPE="UserSourceModule" LANGUAGE="ASM" OVERLAY_NAME=""/>
 				<SOURCE_FILE NAME="psocdynamic.h" TYPE="LibraryIncludeFile" LANGUAGE="C" OVERLAY_NAME="" FILEMODTIME="1242144" LIBTIME="2088812006"/>
 				<SOURCE_FILE NAME="memo.txt" TYPE="TextFile" LANGUAGE="NONE" OVERLAY_NAME=""/>
-				<SOURCE_FILE NAME="uart_b.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_b" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="uart_b.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_b" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="uart_c.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_c" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="uart_c.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_c" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="uart_d.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="uart_d.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="config_d" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="custom.c" TYPE="UserSourceModule" LANGUAGE="C" OVERLAY_NAME=""/>
 				<SOURCE_FILE NAME="custom.h" TYPE="UserIncludeFile" LANGUAGE="C" OVERLAY_NAME=""/>
 				<SOURCE_FILE NAME="gainer_api.h" TYPE="UserIncludeFile" LANGUAGE="C" OVERLAY_NAME=""/>
 				<SOURCE_FILE NAME="gainer_api.c" TYPE="UserSourceModule" LANGUAGE="C" OVERLAY_NAME=""/>
 				<SOURCE_FILE NAME="gainer_ports.h" TYPE="UserIncludeFile" LANGUAGE="C" OVERLAY_NAME=""/>
-				<SOURCE_FILE NAME="amux4_a_1.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="15663744"/>
-				<SOURCE_FILE NAME="amux4_a_1.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="amux4_a_1.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="amux4_a_2.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="7624070"/>
-				<SOURCE_FILE NAME="amux4_a_2.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="amux4_a_2.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="dualadc_a.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="7624070"/>
-				<SOURCE_FILE NAME="dualadc_a.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="dualadc_aint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="dualadc_a.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="7624070"/>
-				<SOURCE_FILE NAME="pga_a_1.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="7624070"/>
-				<SOURCE_FILE NAME="pga_a_1.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="pga_a_1.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="pga_a_2.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="7624070"/>
-				<SOURCE_FILE NAME="pga_a_2.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
-				<SOURCE_FILE NAME="pga_a_2.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				<SOURCE_FILE NAME="amux4_0.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="7624070"/>
+				<SOURCE_FILE NAME="amux4_0.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="amux4_0.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="amux4_1.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="7624070"/>
+				<SOURCE_FILE NAME="amux4_1.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="amux4_1.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="dualadc.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="7624070"/>
+				<SOURCE_FILE NAME="dualadc.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="dualadcint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="dualadc.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="7624070"/>
+				<SOURCE_FILE NAME="pga_0.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="7624070"/>
+				<SOURCE_FILE NAME="pga_0.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="pga_0.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="pga_1.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="0" LIBTIME="7624070"/>
+				<SOURCE_FILE NAME="pga_1.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="pga_1.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_adc" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="amux4_d.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_capsense" FILEMODTIME="0" LIBTIME="7624070"/>
 				<SOURCE_FILE NAME="amux4_d.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="ain_capsense" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="amux4_d.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="ain_capsense" FILEMODTIME="2090141040" LIBTIME="-1"/>
@@ -125,13 +232,17 @@
 				<SOURCE_FILE NAME="pwm16_1.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="pwm16_1.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="pwm16_1.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="sleeptimer.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="0" LIBTIME="7624070"/>
+				<SOURCE_FILE NAME="sleeptimer.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="sleeptimer.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
+				<SOURCE_FILE NAME="sleeptimerint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uart.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="0" LIBTIME="7624070"/>
 				<SOURCE_FILE NAME="uartplus.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uart.h" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uartint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="uart.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="2090141040" LIBTIME="-1"/>
 				<SOURCE_FILE NAME="psocconfigtbl.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="17660188" LIBTIME="1242172"/>
-				<SOURCE_FILE NAME="psocdynamic.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="94125904" LIBTIME="1242700"/>
+				<SOURCE_FILE NAME="psocdynamic.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="159335872" LIBTIME="1242700"/>
 				<SOURCE_FILE NAME="psocdynamic.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="0" LIBTIME="1242700"/>
 				<SOURCE_FILE NAME="psocdynamicint.asm" TYPE="LibrarySource" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="0" LIBTIME="1242700"/>
 				<SOURCE_FILE NAME="psocgpioint.inc" TYPE="LibraryIncludeFile" LANGUAGE="ASM" OVERLAY_NAME="" FILEMODTIME="116" LIBTIME="1242700"/>

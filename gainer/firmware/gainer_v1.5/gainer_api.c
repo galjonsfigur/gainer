@@ -4,6 +4,11 @@
 #include "psocdynamic.h"
 #include "gainer_api.h"
 
+#pragma interrupt_handler PWM16_1_ISR
+void PWM16_1_ISR(void);
+
+const char cVersionString[] = {'1','.','5','.','0','b','0','0'};
+
 #define MIN(A,B)	(((A)<(B))?(A):(B))
 #define MAX(A,B)	(((A)>(B))?(A):(B))
 #define ABS(X)		(((X)>0x80)?((X)-0x80):(0x80-(X)))	// NOTE: valid for BYTE only
@@ -89,26 +94,26 @@ const BYTE pinForPort[18] = {
 };
 
 const BYTE bGainTable[16] = {
-	PGA_A_1_G1_00,	// G0x
-	PGA_A_1_G1_14,	// G1x
-	PGA_A_1_G1_33,	// G2x
-	PGA_A_1_G1_46,	// G3x
-	PGA_A_1_G1_60,	// G4x
-	PGA_A_1_G1_78,	// G5x
-	PGA_A_1_G2_00,	// G6x
-	PGA_A_1_G2_27,	// G7x
-	PGA_A_1_G2_67,	// G8x
-	PGA_A_1_G3_20,	// G9x
-	PGA_A_1_G4_00,	// GAx
-	PGA_A_1_G5_33,	// GBx
-	PGA_A_1_G8_00,	// GCx
-	PGA_A_1_G16_0,	// GDx
-	PGA_A_1_G24_0,	// GEx
-	PGA_A_1_G48_0,	// GFx
+	PGA_0_G1_00,	// G0x
+	PGA_0_G1_14,	// G1x
+	PGA_0_G1_33,	// G2x
+	PGA_0_G1_46,	// G3x
+	PGA_0_G1_60,	// G4x
+	PGA_0_G1_78,	// G5x
+	PGA_0_G2_00,	// G6x
+	PGA_0_G2_27,	// G7x
+	PGA_0_G2_67,	// G8x
+	PGA_0_G3_20,	// G9x
+	PGA_0_G4_00,	// GAx
+	PGA_0_G5_33,	// GBx
+	PGA_0_G8_00,	// GCx
+	PGA_0_G16_0,	// GDx
+	PGA_0_G24_0,	// GEx
+	PGA_0_G48_0,	// GFx
 };
 
 enum {
-	PGA_REFERENCE_VSS,
+	PGA_REFERENCE_DGND,	// was PGA_REFERENCE_VSS
 	PGA_REFERENCE_AGND
 };
 
@@ -123,7 +128,7 @@ static BYTE gPortScanNumber[2][4];
 static BYTE gPortScanLength[2];
 static BYTE gAnalogInputMin[AIN_PORT_MAX + 1];
 static BYTE gAnalogInputMax[AIN_PORT_MAX + 1];
-static BYTE gPgaReference = PGA_REFERENCE_VSS;
+static BYTE gPgaReference = PGA_REFERENCE_DGND;
 
 
 /*
@@ -140,12 +145,13 @@ void configure_port_servo(BYTE port, BYTE mode);
 void connect_port_to_bus(BYTE port);
 void disconnect_port_from_bus(BYTE port);
 char calc_checksum(char *p, BYTE length);
-void handle_port_mode_command(char *p, BYTE length);
-void handle_write_command(char *p, BYTE length);
-void handle_read_command(char *p, BYTE length);
-void handle_quit_command(char *p, BYTE length);
-void handle_configuration_command(char *p, BYTE length);
-BYTE put_error_string_to_reply_buffer(void);
+BYTE handle_port_mode_command(char *p, BYTE length);
+BYTE handle_write_command(char *p, BYTE length);
+BYTE handle_read_command(char *p, BYTE length);
+BYTE handle_quit_command(char *p, BYTE length);
+BYTE handle_configuration_command(char *p, BYTE length);
+BYTE handle_version_command(char *p, BYTE length);
+BYTE put_error_string_to_reply_buffer(BYTE errorCode);
 void update_port_scan_info(void);
 
 void set_drive_mode_registers(BYTE port, BYTE v2, BYTE v1, BYTE v0)
@@ -156,11 +162,11 @@ void set_drive_mode_registers(BYTE port, BYTE v2, BYTE v1, BYTE v0)
 		PRT0DM2 = (0 == v2) ? (PRT0DM2 & ~mask) : ((PRT0DM2 & ~mask) | mask);
 		PRT0DM1 = (0 == v1) ? (PRT0DM1 & ~mask) : ((PRT0DM1 & ~mask) | mask);
 		PRT0DM0 = (0 == v0) ? (PRT0DM0 & ~mask) : ((PRT0DM0 & ~mask) | mask);
-	} else if ((0 <= port) && (port <= 7)) {
+	} else if ((8 <= port) && (port <= 12)) {
 		PRT2DM2 = (0 == v2) ? (PRT2DM2 & ~mask) : ((PRT2DM2 & ~mask) | mask);
 		PRT2DM1 = (0 == v1) ? (PRT2DM1 & ~mask) : ((PRT2DM1 & ~mask) | mask);
 		PRT2DM0 = (0 == v0) ? (PRT2DM0 & ~mask) : ((PRT2DM0 & ~mask) | mask);
-	} else if ((0 <= port) && (port <= 7)) {
+	} else if ((13 <= port) && (port <= 17)) {
 		PRT1DM2 = (0 == v2) ? (PRT1DM2 & ~mask) : ((PRT1DM2 & ~mask) | mask);
 		PRT1DM1 = (0 == v1) ? (PRT1DM1 & ~mask) : ((PRT1DM1 & ~mask) | mask);
 		PRT1DM0 = (0 == v0) ? (PRT1DM0 & ~mask) : ((PRT1DM0 & ~mask) | mask);
@@ -442,13 +448,13 @@ void configure_port_adc(BYTE port, BYTE mode)
 		LoadConfig_ain_adc();
 
 		// start modules
-		AMUX4_A_1_Start();
-		AMUX4_A_2_Start();
-		PGA_A_1_SetGain(bGainTable[0]);
-		PGA_A_2_SetGain(bGainTable[0]);
-		PGA_A_1_Start(PGA_A_1_LOWPOWER);		// see the module datasheet
-		PGA_A_2_Start(PGA_A_2_LOWPOWER);		// might be good lpf!?
-		DUALADC_A_Start(DUALADC_A_HIGHPOWER);	// try lower power later
+		AMUX4_0_Start();
+		AMUX4_1_Start();
+		PGA_0_SetGain(bGainTable[0]);
+		PGA_1_SetGain(bGainTable[0]);
+		PGA_0_Start(PGA_0_LOWPOWER);		// see the module datasheet
+		PGA_1_Start(PGA_1_LOWPOWER);		// might be good lpf!?
+		DUALADC_Start(DUALADC_HIGHPOWER);	// try lower power later
 	}
 
 	// configure the pin mode for the port to 'High Z Analog'
@@ -521,13 +527,13 @@ void configure_port_prspwm(BYTE port, BYTE mode)
 			PRS8_1_WritePolynomial(bPOLY_255);
 			PRS8_2_WritePolynomial(bPOLY_255);
 			PRS8_3_WritePolynomial(bPOLY_255);
-			
+
 			// write initial seed values
 			PRS8_0_WriteSeed(bSEED_000);
 			PRS8_1_WriteSeed(bSEED_000);
 			PRS8_2_WriteSeed(bSEED_000);
 			PRS8_3_WriteSeed(bSEED_000);
-			
+
 			// start PRS8 modules
 			PRS8_0_Start();
 			PRS8_1_Start();
@@ -543,13 +549,13 @@ void configure_port_prspwm(BYTE port, BYTE mode)
 			PRS8_5_WritePolynomial(bPOLY_255);
 			PRS8_6_WritePolynomial(bPOLY_255);
 			PRS8_7_WritePolynomial(bPOLY_255);
-			
+
 			// write initial seed values
 			PRS8_4_WriteSeed(bSEED_000);
 			PRS8_5_WriteSeed(bSEED_000);
 			PRS8_6_WriteSeed(bSEED_000);
 			PRS8_7_WriteSeed(bSEED_000);
-			
+
 			// start PRS8 modules
 			PRS8_4_Start();
 			PRS8_5_Start();
@@ -622,7 +628,7 @@ void configure_port_servo(BYTE port, BYTE mode)
 	}
 
 	// configure the pin mode for the port to 'Strong'
-	set_port_drive_mode(port, STRONG);
+//	set_port_drive_mode(port, STRONG);
 
 	gPortMode[port] = mode;
 }
@@ -634,40 +640,65 @@ char calc_checksum(char *p, BYTE length)
 }
 
 
-void handle_port_mode_command(char *p, BYTE length)
+BYTE handle_port_mode_command(char *p, BYTE length)
 {
 	// calc checksum, then compare
 
 	// NOT IMPLEMENTED
+	return 0;
 }
 
-void handle_write_command(char *p, BYTE length)
+BYTE handle_write_command(char *p, BYTE length)
 {
 	// NOT IMPLEMENTED
+	return 0;
 }
 
-void handle_read_command(char *p, BYTE length)
+BYTE handle_read_command(char *p, BYTE length)
 {
 	// NOT IMPLEMENTED
+	return 0;
 }
 
-void handle_quit_command(char *p, BYTE length)
+BYTE handle_quit_command(char *p, BYTE length)
 {
 	// calc checksum, then compare
 
 	// NOT IMPLEMENTED
+	return 0;
 }
 
-void handle_configuration_command(char *p, BYTE length)
+BYTE handle_configuration_command(char *p, BYTE length)
 {
 	// calc checksum, then compare
 
 	// NOT IMPLEMENTED
+	return 0;
 }
 
-BYTE put_error_string_to_reply_buffer(void)
+BYTE handle_version_command(char *p, BYTE length)
 {
-	return 2;
+	BYTE i = 0;
+
+	// e.g. "?1.0.0.10*"
+	gReplyBuffer[0] = '?';
+
+	for (i = 0; i < sizeof(cVersionString); i++) {
+		gReplyBuffer[1 + i] = cVersionString[i];
+	}
+
+	gReplyBuffer[1 + i] = '*';
+
+	return (2 + sizeof(cVersionString));
+}
+
+BYTE put_error_string_to_reply_buffer(BYTE errorCode)
+{
+	gReplyBuffer[0] = '!';
+	gReplyBuffer[1] = '0' + errorCode;
+	gReplyBuffer[2] = '*';
+
+	return 3;
 }
 
 void update_port_scan_info(void)
@@ -692,7 +723,7 @@ void update_port_scan_info(void)
 
 void SyncWait(void)
 {
-
+	SleepTimer_SyncWait(8, SleepTimer_WAIT_RELOAD);
 }
 
 void ScanInputs(void)
@@ -710,15 +741,15 @@ void ScanInputs(void)
 	BYTE b = 0;
 
 	if (!bWaitingForADC) {	
-		AMUX4_A_1_InputSelect(gPortScanNumber[0][bCounter[0]]);	// ain 0~3
-		AMUX4_A_2_InputSelect(gPortScanNumber[1][bCounter[1]]);	// ain 4~7
-		DUALADC_A_GetSamples(1);	// get one sample
+		AMUX4_0_InputSelect(gPortScanNumber[0][bCounter[0]]);	// ain 0~3
+		AMUX4_1_InputSelect(gPortScanNumber[1][bCounter[1]]);	// ain 4~7
+		DUALADC_GetSamples(1);	// get one sample
 		bWaitingForADC = TRUE;	// set the flag to let CPU do other tasks
 									// DO NOT KEEP WAITING HERE!!
 		return;
 	} else {
 		// it seems that we are waiting for a data is available
-		if (DUALADC_A_fIsDataAvailable() == 0) {
+		if (DUALADC_fIsDataAvailable() == 0) {
 			// it seems that a data is not available
 			return;
 		} else {
@@ -728,8 +759,8 @@ void ScanInputs(void)
 		}
 	}
 
-	wAdcValue[gPortScanNumber[0][bCounter[0]]] = DUALADC_A_iGetData1();				// port 0~3
-	wAdcValue[gPortScanNumber[1][bCounter[1]]] = DUALADC_A_iGetData2ClearFlag();	// port 4~7
+	wAdcValue[gPortScanNumber[0][bCounter[0]]] = DUALADC_iGetData1();				// port 0~3
+	wAdcValue[gPortScanNumber[1][bCounter[1]]] = DUALADC_iGetData2ClearFlag();	// port 4~7
 
 	for (j = 0; j < 2; j++) {
 		bCounter[j]++;
@@ -756,7 +787,7 @@ void ScanInputs(void)
 				gAnalogInputMin[port] = MIN(gAnalogInputMin[port], gPortValue[port]);
 				gAnalogInputMax[port] = MAX(gAnalogInputMax[port], gPortValue[port]);
 
-				if (PGA_REFERENCE_VSS == gPgaReference) {
+				if (PGA_REFERENCE_DGND == gPgaReference) {
 						gPortValue[port] = gAnalogInputMax[port];
 				} else {
 					a = gAnalogInputMin[port];
@@ -799,28 +830,32 @@ void ProcessCommands(void)
 
 			switch (*cLocalRxBuffer) {
 				case 'P':
-					handle_port_mode_command(cLocalRxBuffer, bCommandLength);
+					bNumBytes = handle_port_mode_command(cLocalRxBuffer, bCommandLength);
 					break;
 
 				case 'W':
-					handle_write_command(cLocalRxBuffer, bCommandLength);
+					bNumBytes = handle_write_command(cLocalRxBuffer, bCommandLength);
 					break;
 
 				case 'R':
-					handle_read_command(cLocalRxBuffer, bCommandLength);
+					bNumBytes = handle_read_command(cLocalRxBuffer, bCommandLength);
 					break;
 
 				case 'Q':
-					handle_quit_command(cLocalRxBuffer, bCommandLength);
+					bNumBytes = handle_quit_command(cLocalRxBuffer, bCommandLength);
 					break;
 
 				case 'K':
-					handle_configuration_command(cLocalRxBuffer, bCommandLength);
+					bNumBytes = handle_configuration_command(cLocalRxBuffer, bCommandLength);
+					break;
+
+				case '?':
+					bNumBytes = handle_version_command(cLocalRxBuffer, bCommandLength);
 					break;
 
 				default:
 					// seems to be an invalid command
-					bNumBytes = put_error_string_to_reply_buffer();
+					bNumBytes = put_error_string_to_reply_buffer(SYNTAX_ERROR);
 					break;
 			}
 		}
@@ -888,6 +923,10 @@ BOOL DigitalWrite(BYTE port, BYTE value)
 		default:
 			break;
 	}
+
+	PRT0DR = gPort0Shadow;
+	PRT1DR = gPort1Shadow;
+	PRT2DR = gPort2Shadow;
 
 	return TRUE;
 }
@@ -958,28 +997,28 @@ BOOL AnalogWrite(BYTE port, BYTE value)
 	if (gPortMode[port] == AOUT_PSEUDO_ANALOG) {
 		switch (port) {
 			case 8:
-				PRS8_0_WritePolynomial(value);
+				PRS8_0_WriteSeed(value);
 				break;
 			case 9:
-				PRS8_1_WritePolynomial(value);
+				PRS8_1_WriteSeed(value);
 				break;
 			case 10:
-				PRS8_2_WritePolynomial(value);
+				PRS8_2_WriteSeed(value);
 				break;
 			case 11:
-				PRS8_3_WritePolynomial(value);
+				PRS8_3_WriteSeed(value);
 				break;
 			case 12:
-				PRS8_4_WritePolynomial(value);
+				PRS8_4_WriteSeed(value);
 				break;
 			case 13:
-				PRS8_5_WritePolynomial(value);
+				PRS8_5_WriteSeed(value);
 				break;
 			case 14:
-				PRS8_6_WritePolynomial(value);
+				PRS8_6_WriteSeed(value);
 				break;
 			case 15:
-				PRS8_7_WritePolynomial(value);
+				PRS8_7_WriteSeed(value);
 				break;
 			default:
 				break;
@@ -987,29 +1026,43 @@ BOOL AnalogWrite(BYTE port, BYTE value)
 	} else if (gPortMode[port] == AOUT_SERVO) {
 		switch (port) {
 			case 8:
-				Counter8_0_WritePeriod(value);
+				Counter8_0_WriteCompareValue(value);
 				break;
 			case 9:
-				Counter8_1_WritePeriod(value);
+				Counter8_1_WriteCompareValue(value);
 				break;
 			case 10:
-				Counter8_2_WritePeriod(value);
+				Counter8_2_WriteCompareValue(value);
 				break;
 			case 11:
-				Counter8_3_WritePeriod(value);
+				Counter8_3_WriteCompareValue(value);
 				break;
+#if 0
 			case 12:
-				Counter8_4_WritePeriod(value);
+				Counter8_4_Stop();
+				Counter8_4_WriteCompareValue(value);
+				Counter8_4_COUNTER_REG = Counter8_4_PERIOD;
+				Counter8_4_Start();
 				break;
 			case 13:
-				Counter8_5_WritePeriod(value);
+				Counter8_5_Stop();
+				Counter8_5_WriteCompareValue(value);
+				Counter8_5_COUNTER_REG = Counter8_5_PERIOD;
+				Counter8_5_Start();
 				break;
 			case 14:
-				Counter8_6_WritePeriod(value);
+				Counter8_6_Stop();
+				Counter8_6_WriteCompareValue(value);
+				Counter8_6_COUNTER_REG = Counter8_6_PERIOD;
+				Counter8_6_Start();
 				break;
 			case 15:
-				Counter8_7_WritePeriod(value);
+				Counter8_7_Stop();
+				Counter8_7_WriteCompareValue(value);
+				Counter8_7_COUNTER_REG = Counter8_7_PERIOD;
+				Counter8_7_Start();
 				break;
+#endif
 			default:
 				break;
 		}
@@ -1018,6 +1071,29 @@ BOOL AnalogWrite(BYTE port, BYTE value)
 	gPortValue[port] = value;
 
 	return TRUE;
+}
+
+void PWM16_1_ISR(void)
+{
+//	Counter8_4_Stop();
+	Counter8_4_WriteCompareValue(gPortValue[12]);
+//	Counter8_4_COUNTER_REG = Counter8_4_PERIOD;
+//	Counter8_4_Start();
+
+//	Counter8_5_Stop();
+	Counter8_5_WriteCompareValue(gPortValue[13]);
+//	Counter8_5_COUNTER_REG = Counter8_5_PERIOD;
+//	Counter8_5_Start();
+
+//	Counter8_6_Stop();
+	Counter8_6_WriteCompareValue(gPortValue[14]);
+//	Counter8_6_COUNTER_REG = Counter8_6_PERIOD;
+//	Counter8_6_Start();
+
+//	Counter8_7_Stop();
+	Counter8_7_WriteCompareValue(gPortValue[15]);
+//	Counter8_7_COUNTER_REG = Counter8_7_PERIOD;
+//	Counter8_7_Start();
 }
 
 BYTE AnalogRead(BYTE port)
@@ -1118,18 +1194,36 @@ GPortMode GetPortMode(BYTE port)
 
 void Initialize(void)
 {
+	if (!IscommonLoaded()) {
+		LoadConfig_common();
+	}
 
+	M8C_EnableGInt;
+
+	UART_IntCntl(UART_ENABLE_RX_INT);
+	UART_Start(UART_PARITY_NONE);
+
+	SleepTimer_Start();
+	SleepTimer_SetInterval(SleepTimer_64_HZ);
+	SleepTimer_EnableInt();
+
+#if 0
+	// Should be called after starting Counter8 modules!?
+	PWM16_1_WritePeriod(2550);
+	PWM16_1_WritePulseWidth(2294);
+	PWM16_1_Start();
+#endif
 }
 
 void Reboot(void)
 {
 	if (Isain_adcLoaded()) {
 		// stop modules
-		AMUX4_A_1_Stop();
-		AMUX4_A_2_Stop();
-		PGA_A_1_Stop();		// see the module datasheet
-		PGA_A_2_Stop();		// might be good lpf!?
-		DUALADC_A_Stop();	// try lower power later
+		AMUX4_0_Stop();
+		AMUX4_1_Stop();
+		PGA_0_Stop();		// see the module datasheet
+		PGA_1_Stop();		// might be good lpf!?
+		DUALADC_Stop();	// try lower power later
 
 		UnloadConfig_ain_adc();
 	}

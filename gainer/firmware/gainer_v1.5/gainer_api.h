@@ -6,6 +6,19 @@
  * @author Shigeru Kobayashi
  */
 
+/**
+ * Error code definitions for Gainer I/O module
+ */
+enum {
+	NO_ERROR = 0,
+	SYNTAX_ERROR,
+	CHECKSUM_ERROR,
+	BUSY_ERROR
+};
+
+/**
+ * Definitions for special ports
+ */
 enum port_number {
 	PORT_BUTTON = 16,
 	PORT_LED
