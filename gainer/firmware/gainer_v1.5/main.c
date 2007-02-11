@@ -88,10 +88,12 @@ void main()
     // End Initialize Project
 
 	while (1) {
+#if 0
 		// Sync loop sample rate
 		SyncWait();
+#endif
 
-#if 1
+#if 0
 		UART_PutChar('>');
 
 		// NOTE: Just for testing
@@ -112,6 +114,9 @@ void main()
 
 		// run transfer function and update output variables
 		ProcessCommands();
+		
+		// report values to the host port if needed
+		ReportToHost();
 
 		// CustomPreOutputUpdate();
 		CustomPreOutputUpdate();

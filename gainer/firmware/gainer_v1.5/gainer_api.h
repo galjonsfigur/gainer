@@ -13,7 +13,25 @@ enum {
 	NO_ERROR = 0,
 	SYNTAX_ERROR,
 	CHECKSUM_ERROR,
-	BUSY_ERROR
+	PORT_MODE_ERROR
+};
+
+/**
+ * Serial report mode
+ */
+enum {
+	REPORT_NONE = 0,
+	REPORT_ONCE,
+	REPORT_ALWAYS,
+	REPORT_WHEN_CHANGED
+};
+
+/**
+ * Parameter ID
+ */
+enum {
+	PGA_GAIN = 0,	// both A and B
+	PGA_REFERENCE	// both A and B
 };
 
 /**
@@ -47,6 +65,7 @@ typedef enum {
 void SyncWait(void);
 void ScanInputs(void);
 void ProcessCommands(void);
+void ReportToHost(void);
 
 BOOL DigitalWrite(BYTE port, BYTE value);
 BYTE DigitalRead(BYTE port);

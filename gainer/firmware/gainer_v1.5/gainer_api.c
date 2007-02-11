@@ -12,6 +12,7 @@ const char cVersionString[] = {'1','.','5','.','0','b','0','0'};
 #define MIN(A,B)	(((A)<(B))?(A):(B))
 #define MAX(A,B)	(((A)>(B))?(A):(B))
 #define ABS(X)		(((X)>0x80)?((X)-0x80):(0x80-(X)))	// NOTE: valid for BYTE only
+#define HEX_TO_BYTE(X) (((X)>='0'&&(X)<='9')?((X)-'0'):((X)-'A'+10))
 
 /*
  * PSoC port drive mode definitions
@@ -55,6 +56,12 @@ static BYTE gPortMode[18] = {
  * The array to store values of each port.
  */
 static BYTE gPortValue[18] = {
+	0, 0, 0, 0, 0, 0, 0, 0,	// port 0-7
+	0, 0, 0, 0, 0, 0, 0, 0,	// port 8-15
+	0, 0					// port 16 (Button), port 17 (LED)
+};
+
+static BYTE gLastPortValue[18] = {
 	0, 0, 0, 0, 0, 0, 0, 0,	// port 0-7
 	0, 0, 0, 0, 0, 0, 0, 0,	// port 8-15
 	0, 0					// port 16 (Button), port 17 (LED)
@@ -119,7 +126,7 @@ enum {
 
 
 /*
- * Global variables.
+ * Additional global variables.
  */
 static BOOL gVerboseMode = FALSE;
 static char gReplyBuffer[32];
@@ -129,11 +136,44 @@ static BYTE gPortScanLength[2];
 static BYTE gAnalogInputMin[AIN_PORT_MAX + 1];
 static BYTE gAnalogInputMax[AIN_PORT_MAX + 1];
 static BYTE gPgaReference = PGA_REFERENCE_DGND;
+static DWORD gReportMask = 0x00000000;
+static BYTE gReportMode = 0;
+static BYTE gReportStartsFrom = 0;
+static BOOL gReadyToReport = FALSE;
+
+
+/*
+ * Interrupt handlers.
+ */
+void PWM16_1_ISR(void)
+{
+//	Counter8_4_Stop();
+	Counter8_4_WriteCompareValue(gPortValue[12]);
+//	Counter8_4_COUNTER_REG = Counter8_4_PERIOD;
+//	Counter8_4_Start();
+
+//	Counter8_5_Stop();
+	Counter8_5_WriteCompareValue(gPortValue[13]);
+//	Counter8_5_COUNTER_REG = Counter8_5_PERIOD;
+//	Counter8_5_Start();
+
+//	Counter8_6_Stop();
+	Counter8_6_WriteCompareValue(gPortValue[14]);
+//	Counter8_6_COUNTER_REG = Counter8_6_PERIOD;
+//	Counter8_6_Start();
+
+//	Counter8_7_Stop();
+	Counter8_7_WriteCompareValue(gPortValue[15]);
+//	Counter8_7_COUNTER_REG = Counter8_7_PERIOD;
+//	Counter8_7_Start();
+}
 
 
 /*
  * Prototypes for local functions (i.e. not user functions)
  */
+BYTE hex_to_byte(char *str);
+void byte_to_hex(BYTE value, char *str);
 void set_drive_mode_registers(BYTE port, BYTE v2, BYTE v1, BYTE v0);
 BOOL set_port_drive_mode(BYTE port, BYTE mode);
 BOOL is_valid_port_number(BYTE port, BYTE mode);
@@ -144,7 +184,7 @@ void configure_port_prspwm(BYTE port, BYTE mode);
 void configure_port_servo(BYTE port, BYTE mode);
 void connect_port_to_bus(BYTE port);
 void disconnect_port_from_bus(BYTE port);
-char calc_checksum(char *p, BYTE length);
+BOOL is_checksum_ok(char *p, BYTE length);
 BYTE handle_port_mode_command(char *p, BYTE length);
 BYTE handle_write_command(char *p, BYTE length);
 BYTE handle_read_command(char *p, BYTE length);
@@ -153,6 +193,29 @@ BYTE handle_configuration_command(char *p, BYTE length);
 BYTE handle_version_command(char *p, BYTE length);
 BYTE put_error_string_to_reply_buffer(BYTE errorCode);
 void update_port_scan_info(void);
+
+
+BYTE hex_to_byte(char *str)
+{
+	BYTE h = HEX_TO_BYTE(*(str));
+	BYTE l = HEX_TO_BYTE(*(str + 1));
+
+	return ((h << 4) + l);
+}
+
+
+const char cHexString[16] = "0123456789ABCDEF";
+void byte_to_hex(BYTE value, char *str)
+{
+	BYTE v = value;
+
+	v >>= 4;
+	*str = cHexString[v & 0x0F];
+	str++;
+	v = value;
+	*str = cHexString[v & 0x0F];
+}
+
 
 void set_drive_mode_registers(BYTE port, BYTE v2, BYTE v1, BYTE v0)
 {
@@ -172,6 +235,7 @@ void set_drive_mode_registers(BYTE port, BYTE v2, BYTE v1, BYTE v0)
 		PRT1DM0 = (0 == v0) ? (PRT1DM0 & ~mask) : ((PRT1DM0 & ~mask) | mask);
 	}
 }
+
 
 /*
  * Set port drive mode
@@ -226,6 +290,7 @@ BOOL set_port_drive_mode(BYTE port, BYTE mode)
 	return TRUE;
 }
 
+
 BOOL is_valid_port_number(BYTE port, BYTE mode)
 {
 	switch (mode) {
@@ -254,6 +319,7 @@ BOOL is_valid_port_number(BYTE port, BYTE mode)
 
 	return FALSE;
 }
+
 
 void connect_port_to_bus(BYTE port)
 {
@@ -304,6 +370,7 @@ void connect_port_to_bus(BYTE port)
 	}	
 }
 
+
 void disconnect_port_from_bus(BYTE port)
 {
 	switch (port) {
@@ -353,6 +420,7 @@ void disconnect_port_from_bus(BYTE port)
 	}
 }
 
+
 void configure_port_din(BYTE port, BYTE mode)
 {
 	// disconnect a module from an output if needed
@@ -397,6 +465,7 @@ void configure_port_din(BYTE port, BYTE mode)
 	gPortMode[port] = mode;
 }
 
+
 void configure_port_dout(BYTE port, BYTE mode)
 {
 	// disconnect a module from an output if needed
@@ -440,6 +509,7 @@ void configure_port_dout(BYTE port, BYTE mode)
 
 	gPortMode[port] = mode;
 }
+
 
 void configure_port_adc(BYTE port, BYTE mode)
 {
@@ -487,6 +557,7 @@ void configure_port_adc(BYTE port, BYTE mode)
 	gPortMode[port] = mode;
 }
 
+
 void configure_port_capsense(BYTE port, BYTE mode)
 {
 	// load the configuration if needed
@@ -510,6 +581,7 @@ void configure_port_capsense(BYTE port, BYTE mode)
 
 	gPortMode[port] = mode;
 }
+
 
 #define bPOLY_255 0xB8	// Modular Polynomial = [8,6,5,4]
 #define	bSEED_255 0xFF	// initial seed value
@@ -575,6 +647,7 @@ void configure_port_prspwm(BYTE port, BYTE mode)
 	gPortMode[port] = mode;
 }
 
+
 void configure_port_servo(BYTE port, BYTE mode)
 {
 	// load the configuration if needed
@@ -633,53 +706,272 @@ void configure_port_servo(BYTE port, BYTE mode)
 	gPortMode[port] = mode;
 }
 
-char calc_checksum(char *p, BYTE length)
+
+BOOL is_checksum_ok(char *p, BYTE length)
 {
-	// NOT IMPLEMENTED!!!
-	return 0;
+	BYTE checksum = hex_to_byte(p + length - 2);
+
+	// THIS IS TEMPORAL IMPLEMENTATION
+	return (checksum == 0x00);
 }
 
+
+// {P}+{00..FF: port number}+{00..FF: port mode}+{00..FF: checksum}
+// e.g. P0301ss (set port mode of the port 03 to mode 01)
+#define COMMAND_LENGTH_PORT_MODE 7
 
 BYTE handle_port_mode_command(char *p, BYTE length)
 {
-	// calc checksum, then compare
+	BYTE i = 0;
+	BYTE port = 0;
+	BYTE mode = 0;
+	BYTE result = 0;
 
-	// NOT IMPLEMENTED
-	return 0;
+	if (length != COMMAND_LENGTH_PORT_MODE) {
+		return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+	}
+
+	// calc checksum, then compare
+	if (!is_checksum_ok(p, length)) {
+		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
+	}
+
+	port = hex_to_byte(p + 1);
+	mode = hex_to_byte(p + 3);
+	result = SetPortMode(port, mode);
+
+	if (result == FALSE) {
+		return put_error_string_to_reply_buffer(PORT_MODE_ERROR);
+	}
+
+	// echo the command
+	for (i = 0; i < length; i++) {
+		gReplyBuffer[i] = *(p + i);
+	}
+	gReplyBuffer[i + 1] = '*';
+
+	return COMMAND_LENGTH_PORT_MODE + 1;
 }
+
+
+// {W}+{00..FF: port number}+{00..FF: number of ports}+{00..FF: value 0}...{00..FF: value n}
+// e.g. W0202F83Css* (set port 02 and 03 to0xF8 and 0x3C)
+// e.g. W110101ss* (turn on the LED)
 
 BYTE handle_write_command(char *p, BYTE length)
 {
-	// NOT IMPLEMENTED
-	return 0;
+	BYTE i = 0;
+	BYTE port = 0;
+	BYTE numberOfPorts = 0;
+	BYTE value = 0;
+
+	// calc checksum, then compare
+	if (!is_checksum_ok(p, length)) {
+		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
+	}
+
+	numberOfPorts = hex_to_byte(p + 3);
+	if (length != (5 + (numberOfPorts * 2) + 2)) {
+		return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+	}
+
+	port = hex_to_byte(p + 1);
+	for (i = 0; i < numberOfPorts; i++) {
+		value = hex_to_byte(p + 5 + (i * 2));
+		AnalogWrite(port + i, value);
+	}
+
+	// echo the command
+	for (i = 0; i < length; i++) {
+		gReplyBuffer[i] = *(p + i);
+	}
+	gReplyBuffer[i + 1] = '*';
+
+	return length + 1;
 }
+
+
+// {R}+{00..03: stop, once, always, when changed}+{00..FF: port number}+{00..FF: number of ports}+{00..FF: checksum}
+// e.g. r030004ss (notify when changed, port 0 to 3)
+// e.g. r00ss (stop reading)
+#define COMMAND_LENGTH_READ 9
+#define COMMAND_LENGTH_READ_STOP 5
 
 BYTE handle_read_command(char *p, BYTE length)
 {
-	// NOT IMPLEMENTED
-	return 0;
+	BYTE i = 0;
+	BYTE mode = 0;
+	BYTE startsFrom = 0;
+	BYTE numberOfPorts = 0;
+
+	// calc checksum, then compare
+	if (!is_checksum_ok(p, length)) {
+		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
+	}
+
+	mode = hex_to_byte(p + 1);
+
+	switch (mode) {
+		case REPORT_NONE:
+			// {R}+{00}+{ss}+{*}
+			if (length != COMMAND_LENGTH_READ_STOP) {
+				return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+			} else {
+				// STOP READING
+				gReportMode = REPORT_NONE;
+				gReportMask = 0x00000000;
+
+				// echo the command
+				for (i = 0; i < length; i++) {
+					gReplyBuffer[i] = *(p + i);
+				}
+				gReplyBuffer[i + 1] = '*';
+				return length + 1;
+			}
+			break;
+
+		case REPORT_ONCE:
+		case REPORT_ALWAYS:
+		case REPORT_WHEN_CHANGED:
+			startsFrom = hex_to_byte(p + 3);
+			numberOfPorts = hex_to_byte(p + 5);
+			if (length != COMMAND_LENGTH_READ) {
+				return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+			} else {
+				gReportMode = mode;
+				gReportMask = 0x00000000;
+				gReportStartsFrom = startsFrom;
+				for (i = startsFrom; i < (startsFrom + numberOfPorts); i++) {
+					gReportMask |= ((DWORD)1 << (DWORD)i);
+					switch (gPortMode[i]) {
+						case DIN_HIGH_Z:
+						case DIN_PULL_UP:
+						case DIN_PULL_DOWN:
+							gPortValue[i] = DigitalRead(i);
+							break;
+
+						default:
+							break;
+					}
+					gLastPortValue[i] = gPortValue[i];
+				}
+				return 0;
+			}
+			break;
+
+		default:
+			return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+			break;
+	}
 }
+
+
+// {Q}+{U}+{I}+{T}+{00..FF: checksum}
+// e.g. QUITss
+#define COMMAND_LENGTH_QUIT 6
 
 BYTE handle_quit_command(char *p, BYTE length)
 {
-	// calc checksum, then compare
+	BYTE i = 0;
 
-	// NOT IMPLEMENTED
-	return 0;
+	if (length != COMMAND_LENGTH_QUIT) {
+		return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+	}
+
+	// calc checksum, then compare
+	if (!is_checksum_ok(p, length)) {
+		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
+	}
+
+	Reboot();
+	Initialize();
+
+	// echo the command
+	for (i = 0; i < length; i++) {
+		gReplyBuffer[i] = *(p + i);
+	}
+	gReplyBuffer[i + 1] = '*';
+
+	return length + 1;
 }
+
+
+// {K}+{00..FF: parameter id}+{00..FF: value}+{checksum}
+// e.g. K0105ss (set value of the parameter 0x01 to 0x05)
+#define COMMAND_LENGTH_CONFIGURATION 7
 
 BYTE handle_configuration_command(char *p, BYTE length)
 {
-	// calc checksum, then compare
+	BYTE i = 0;
+	BYTE id = 0;
+	BYTE value = 0;
 
-	// NOT IMPLEMENTED
-	return 0;
+	// calc checksum, then compare
+	if (!is_checksum_ok(p, length)) {
+		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
+	}
+
+	if (!Isain_adcLoaded()) {
+		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
+	}
+
+	id = hex_to_byte(p + 1);
+	value = hex_to_byte(p + 3);
+
+	switch (id) {
+		case PGA_GAIN:
+			if (value > 15) {
+				// specified gain seems to be invalid
+				return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+			}
+			PGA_0_SetGain(bGainTable[value]);
+			PGA_1_SetGain(bGainTable[value]);
+			break;
+
+		case PGA_REFERENCE:
+			if (value > 1) {
+				// specified reference seems to be invalid
+				return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+			}
+
+			// see TRM v.1.22, 13.2.37
+			if (0 == value) {	// VSS (10b)
+				PGA_0_GAIN_CR0 = (PGA_0_GAIN_CR0 & 0xFC) | 0x02;
+				PGA_1_GAIN_CR0 = (PGA_1_GAIN_CR0 & 0xFC) | 0x02;
+				gPgaReference = PGA_REFERENCE_DGND;
+			} else if (1 == value) {	// AGND (01b)
+				PGA_0_GAIN_CR0 = (PGA_0_GAIN_CR0 & 0xFC) | 0x01;
+				PGA_1_GAIN_CR0 = (PGA_1_GAIN_CR0 & 0xFC) | 0x01;
+				gPgaReference = PGA_REFERENCE_AGND;
+			}
+			break;
+
+		default:
+			return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+			break;
+	}
+
+	// echo the command
+	for (i = 0; i < length; i++) {
+		gReplyBuffer[i] = *(p + i);
+	}
+	gReplyBuffer[i + 1] = '*';
+
+	return length + 1;
 }
+
+
+// {'?'}+{'*'}
+#define COMMAND_LENGTH_VERSION	1
 
 BYTE handle_version_command(char *p, BYTE length)
 {
 	BYTE i = 0;
 
+	if (length != COMMAND_LENGTH_VERSION) {
+		return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+	}
+	
 	// e.g. "?1.0.0.10*"
 	gReplyBuffer[0] = '?';
 
@@ -692,6 +984,7 @@ BYTE handle_version_command(char *p, BYTE length)
 	return (2 + sizeof(cVersionString));
 }
 
+
 BYTE put_error_string_to_reply_buffer(BYTE errorCode)
 {
 	gReplyBuffer[0] = '!';
@@ -700,6 +993,7 @@ BYTE put_error_string_to_reply_buffer(BYTE errorCode)
 
 	return 3;
 }
+
 
 void update_port_scan_info(void)
 {
@@ -721,10 +1015,14 @@ void update_port_scan_info(void)
 	}
 }
 
+
 void SyncWait(void)
 {
 	SleepTimer_SyncWait(8, SleepTimer_WAIT_RELOAD);
 }
+
+
+#define ADC_SCAN_FINISHED	0x01
 
 void ScanInputs(void)
 {
@@ -735,7 +1033,6 @@ void ScanInputs(void)
 
 	BYTE i = 0;
 	BYTE j = 0;	
-	BYTE bDinValues;
 	BYTE port = 0;
 	BYTE a = 0;
 	BYTE b = 0;
@@ -766,12 +1063,12 @@ void ScanInputs(void)
 		bCounter[j]++;
 		if (bCounter[j] >= gPortScanLength[j]) {
 			bCounter[j] = 0;
-			bAdcFlags[j] |= 0x01;
+			bAdcFlags[j] |= ADC_SCAN_FINISHED;
 		}
 	}
 
 	for (j = 0; j < 2; j++) {
-		if ((bAdcFlags[j] & 0x01) == 0) {
+		if ((bAdcFlags[j] & ADC_SCAN_FINISHED) == 0) {
 			continue;
 		}
 
@@ -780,27 +1077,33 @@ void ScanInputs(void)
 			gPortValue[port] = wAdcValue[port] & 0x00FF;
 
 			if (gPortMode[port] == AIN_ADC_LPF) {
-				// LPF
+				// LPF processing
 			} else if (gPortMode[port] == AIN_ADC_HPF) {
-				// HPF
+				// HPF processing
 			} else if (gPortMode[port] == AIN_ADC_PEAK_HOLD) {
 				gAnalogInputMin[port] = MIN(gAnalogInputMin[port], gPortValue[port]);
 				gAnalogInputMax[port] = MAX(gAnalogInputMax[port], gPortValue[port]);
 
 				if (PGA_REFERENCE_DGND == gPgaReference) {
-						gPortValue[port] = gAnalogInputMax[port];
-				} else {
+					gPortValue[port] = gAnalogInputMax[port];
+				} else {	// PGA_REFERENCE_AGND
 					a = gAnalogInputMin[port];
 					b = gAnalogInputMax[port];
-			
 					gPortValue[port] = (ABS(a) > ABS(b)) ? a : b;
 				}
 			}
 		}
 		
-		bAdcFlags[j] &= ~0x01;
+//		bAdcFlags[j] &= ~0x01;
+	}
+
+	if ((bAdcFlags[0] & ADC_SCAN_FINISHED) && (bAdcFlags[1] & ADC_SCAN_FINISHED)) {
+		gReadyToReport = TRUE;
+		bAdcFlags[0] &= ~ADC_SCAN_FINISHED;
+		bAdcFlags[1] &= ~ADC_SCAN_FINISHED;
 	}
 }
+
 
 void ProcessCommands(void)
 {
@@ -865,6 +1168,63 @@ void ProcessCommands(void)
 		}
 	}
 }
+
+
+void ReportToHost(void)
+{
+	BYTE i = 0;
+	BOOL hasChanged = FALSE;
+	BYTE numberOfPorts = 0;
+
+	for (i = 0; i < NUM_OF_PORTS; i++) {
+		if (gReportMask & ((DWORD)1 << (DWORD)i)) {
+			switch (gPortMode[i]) {
+				case DIN_HIGH_Z:
+				case DIN_PULL_UP:
+				case DIN_PULL_DOWN:
+					gPortValue[i] = DigitalRead(i);
+					break;
+
+				default:
+					break;
+			}
+
+			if (gLastPortValue[i] != gPortValue[i]) {
+				hasChanged = TRUE;
+				break;
+			}
+		}
+	}
+
+	// Return immediately if there is no need to report
+	if (gReportMode == REPORT_NONE) {
+		return;
+	} else if ((gReportMode == REPORT_WHEN_CHANGED) && (!hasChanged)) {
+		return;
+	}
+
+	if (!gReadyToReport) {
+		return;
+	}
+
+	UART_PutChar('R');
+	UART_PutSHexByte(gReportStartsFrom);
+
+	for (i = 0; i < NUM_OF_PORTS; i++) {
+		if (gReportMask & ((DWORD)1 << (DWORD)i)) {
+			numberOfPorts++;
+			UART_PutSHexByte(gPortValue[i]);
+			gLastPortValue[i] = gPortValue[i];
+		}
+	}
+
+	UART_PutChar('*');
+
+	if (gReportMode == REPORT_ONCE) {
+		gReportMode = REPORT_NONE;
+	}
+}
+
 
 BOOL DigitalWrite(BYTE port, BYTE value)
 {
@@ -931,6 +1291,7 @@ BOOL DigitalWrite(BYTE port, BYTE value)
 	return TRUE;
 }
 
+
 BYTE DigitalRead(BYTE port)
 {
 	switch (port) {
@@ -991,6 +1352,7 @@ BYTE DigitalRead(BYTE port)
 
 	return TRUE;
 }
+
 
 BOOL AnalogWrite(BYTE port, BYTE value)
 {
@@ -1066,6 +1428,8 @@ BOOL AnalogWrite(BYTE port, BYTE value)
 			default:
 				break;
 		}
+	} else {
+		DigitalWrite(port, value);
 	}
 
 	gPortValue[port] = value;
@@ -1073,33 +1437,12 @@ BOOL AnalogWrite(BYTE port, BYTE value)
 	return TRUE;
 }
 
-void PWM16_1_ISR(void)
-{
-//	Counter8_4_Stop();
-	Counter8_4_WriteCompareValue(gPortValue[12]);
-//	Counter8_4_COUNTER_REG = Counter8_4_PERIOD;
-//	Counter8_4_Start();
-
-//	Counter8_5_Stop();
-	Counter8_5_WriteCompareValue(gPortValue[13]);
-//	Counter8_5_COUNTER_REG = Counter8_5_PERIOD;
-//	Counter8_5_Start();
-
-//	Counter8_6_Stop();
-	Counter8_6_WriteCompareValue(gPortValue[14]);
-//	Counter8_6_COUNTER_REG = Counter8_6_PERIOD;
-//	Counter8_6_Start();
-
-//	Counter8_7_Stop();
-	Counter8_7_WriteCompareValue(gPortValue[15]);
-//	Counter8_7_COUNTER_REG = Counter8_7_PERIOD;
-//	Counter8_7_Start();
-}
 
 BYTE AnalogRead(BYTE port)
 {
 	return gPortValue[port];
 }
+
 
 BOOL SetPortMode(BYTE port, GPortMode mode)
 {
@@ -1187,10 +1530,12 @@ BOOL SetPortMode(BYTE port, GPortMode mode)
 	return TRUE;
 }
 
+
 GPortMode GetPortMode(BYTE port)
 {
 	return gPortMode[port];
 }
+
 
 void Initialize(void)
 {
@@ -1214,6 +1559,7 @@ void Initialize(void)
 	PWM16_1_Start();
 #endif
 }
+
 
 void Reboot(void)
 {
