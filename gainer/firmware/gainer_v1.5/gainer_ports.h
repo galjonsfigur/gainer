@@ -58,6 +58,6 @@
 #define AOUT_PORT_MIN	8
 #define AOUT_PORT_MAX	15
 
-#define NUM_OF_PORTS	18
+#define NUM_OF_PORTS	16
 
 #endif // GAINER_PORTS_H

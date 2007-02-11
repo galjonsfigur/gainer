@@ -31,9 +31,6 @@
 
 void main()
 {
-	// NOTE: Just for testing
-	BOOL led = FALSE;
-
 	Initialize();
 
 	// set port mode for all pins
@@ -56,6 +53,8 @@ void main()
 	SetPortMode(15, AOUT_SERVO);
 	SetPortMode(PORT_BUTTON, DIN_PULL_DOWN);
 	SetPortMode(PORT_LED, DOUT_STRONG);
+
+	DigitalWrite(PORT_LED, 0);
 
 #if 1
 	// set initial values (just for testing)
@@ -91,19 +90,6 @@ void main()
 #if 0
 		// Sync loop sample rate
 		SyncWait();
-#endif
-
-#if 0
-		UART_PutChar('>');
-
-		// NOTE: Just for testing
-		if (led) {
-			DigitalWrite(PORT_LED, 1);
-			led = FALSE;
-		} else {
-			DigitalWrite(PORT_LED, 0);
-			led = TRUE;
-		}
 #endif
 
 		// update input variables

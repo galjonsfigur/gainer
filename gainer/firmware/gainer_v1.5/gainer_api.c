@@ -136,9 +136,10 @@ static BYTE gPortScanLength[2];
 static BYTE gAnalogInputMin[AIN_PORT_MAX + 1];
 static BYTE gAnalogInputMax[AIN_PORT_MAX + 1];
 static BYTE gPgaReference = PGA_REFERENCE_DGND;
-static DWORD gReportMask = 0x00000000;
+static WORD gReportMask = 0x0000;
 static BYTE gReportMode = 0;
 static BYTE gReportStartsFrom = 0;
+static BYTE gReportNumberOfPorts = 0;
 static BOOL gReadyToReport = FALSE;
 
 
@@ -214,6 +215,18 @@ void byte_to_hex(BYTE value, char *str)
 	str++;
 	v = value;
 	*str = cHexString[v & 0x0F];
+}
+
+
+void init_variables(void)
+{
+	gVerboseMode = FALSE;
+	gPortScanMask = 0x00;
+	gReportMask = 0x0000;
+	gReportMode = REPORT_NONE;
+	gReportStartsFrom = 0;
+	gReportNumberOfPorts = 0;
+	gReadyToReport = FALSE;
 }
 
 
@@ -748,15 +761,14 @@ BYTE handle_port_mode_command(char *p, BYTE length)
 	for (i = 0; i < length; i++) {
 		gReplyBuffer[i] = *(p + i);
 	}
-	gReplyBuffer[i + 1] = '*';
+	gReplyBuffer[i] = '*';
 
-	return COMMAND_LENGTH_PORT_MODE + 1;
+	return (COMMAND_LENGTH_PORT_MODE + 1);
 }
 
 
-// {W}+{00..FF: port number}+{00..FF: number of ports}+{00..FF: value 0}...{00..FF: value n}
-// e.g. W0202F83Css* (set port 02 and 03 to0xF8 and 0x3C)
-// e.g. W110101ss* (turn on the LED)
+// {W}+{00..FF: port number}+{0..F: number of ports}+{00..FF: value 0}...{00..FF: value n}
+// e.g. W022F83Css* (set port 02 and 03 to0xF8 and 0x3C)
 
 BYTE handle_write_command(char *p, BYTE length)
 {
@@ -770,8 +782,8 @@ BYTE handle_write_command(char *p, BYTE length)
 		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
 	}
 
-	numberOfPorts = hex_to_byte(p + 3);
-	if (length != (5 + (numberOfPorts * 2) + 2)) {
+	numberOfPorts = HEX_TO_BYTE(*(p + 3));
+	if (length != (4 + (numberOfPorts * 2) + 2)) {
 		return put_error_string_to_reply_buffer(SYNTAX_ERROR);
 	}
 
@@ -785,17 +797,17 @@ BYTE handle_write_command(char *p, BYTE length)
 	for (i = 0; i < length; i++) {
 		gReplyBuffer[i] = *(p + i);
 	}
-	gReplyBuffer[i + 1] = '*';
+	gReplyBuffer[i] = '*';
 
-	return length + 1;
+	return (length + 1);
 }
 
 
-// {R}+{00..03: stop, once, always, when changed}+{00..FF: port number}+{00..FF: number of ports}+{00..FF: checksum}
-// e.g. r030004ss (notify when changed, port 0 to 3)
-// e.g. r00ss (stop reading)
-#define COMMAND_LENGTH_READ 9
-#define COMMAND_LENGTH_READ_STOP 5
+// {R}+{0..3: stop, once, always, when changed}+{00..FF: port number}+{00..FF: number of ports}+{00..FF: checksum}
+// e.g. r30004ss (notify when changed, port 0 to 3)
+// e.g. r0ss (stop reading)
+#define COMMAND_LENGTH_READ 8
+#define COMMAND_LENGTH_READ_STOP 4
 
 BYTE handle_read_command(char *p, BYTE length)
 {
@@ -809,7 +821,7 @@ BYTE handle_read_command(char *p, BYTE length)
 		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
 	}
 
-	mode = hex_to_byte(p + 1);
+	mode = HEX_TO_BYTE(*(p + 1));
 
 	switch (mode) {
 		case REPORT_NONE:
@@ -819,30 +831,31 @@ BYTE handle_read_command(char *p, BYTE length)
 			} else {
 				// STOP READING
 				gReportMode = REPORT_NONE;
-				gReportMask = 0x00000000;
+				gReportMask = 0x0000;
 
 				// echo the command
 				for (i = 0; i < length; i++) {
 					gReplyBuffer[i] = *(p + i);
 				}
-				gReplyBuffer[i + 1] = '*';
-				return length + 1;
+				gReplyBuffer[i] = '*';
+				return (length + 1);
 			}
 			break;
 
 		case REPORT_ONCE:
 		case REPORT_ALWAYS:
 		case REPORT_WHEN_CHANGED:
-			startsFrom = hex_to_byte(p + 3);
-			numberOfPorts = hex_to_byte(p + 5);
+			startsFrom = hex_to_byte(p + 2);
+			numberOfPorts = hex_to_byte(p + 4);
 			if (length != COMMAND_LENGTH_READ) {
 				return put_error_string_to_reply_buffer(SYNTAX_ERROR);
 			} else {
 				gReportMode = mode;
-				gReportMask = 0x00000000;
+				gReportMask = 0x0000;
 				gReportStartsFrom = startsFrom;
+				gReportNumberOfPorts = numberOfPorts;
 				for (i = startsFrom; i < (startsFrom + numberOfPorts); i++) {
-					gReportMask |= ((DWORD)1 << (DWORD)i);
+					gReportMask |= ((WORD)1 << (WORD)i);
 					switch (gPortMode[i]) {
 						case DIN_HIGH_Z:
 						case DIN_PULL_UP:
@@ -884,15 +897,14 @@ BYTE handle_quit_command(char *p, BYTE length)
 	}
 
 	Reboot();
-	Initialize();
 
 	// echo the command
 	for (i = 0; i < length; i++) {
 		gReplyBuffer[i] = *(p + i);
 	}
-	gReplyBuffer[i + 1] = '*';
+	gReplyBuffer[i] = '*';
 
-	return length + 1;
+	return (length + 1);
 }
 
 
@@ -955,9 +967,9 @@ BYTE handle_configuration_command(char *p, BYTE length)
 	for (i = 0; i < length; i++) {
 		gReplyBuffer[i] = *(p + i);
 	}
-	gReplyBuffer[i + 1] = '*';
+	gReplyBuffer[i] = '*';
 
-	return length + 1;
+	return (length + 1);
 }
 
 
@@ -1018,7 +1030,8 @@ void update_port_scan_info(void)
 
 void SyncWait(void)
 {
-	SleepTimer_SyncWait(8, SleepTimer_WAIT_RELOAD);
+	// wait for about 2ms
+	SleepTimer_SyncWait(1, SleepTimer_WAIT_RELOAD);
 }
 
 
@@ -1056,8 +1069,11 @@ void ScanInputs(void)
 		}
 	}
 
-	wAdcValue[gPortScanNumber[0][bCounter[0]]] = DUALADC_iGetData1();				// port 0~3
-	wAdcValue[gPortScanNumber[1][bCounter[1]]] = DUALADC_iGetData2ClearFlag();	// port 4~7
+	// port 0 ~ 3
+	wAdcValue[gPortScanNumber[0][bCounter[0]]] = DUALADC_iGetData1();
+
+	// port 4 ~ 7
+	wAdcValue[gPortScanNumber[1][bCounter[1]]] = DUALADC_iGetData2ClearFlag();
 
 	for (j = 0; j < 2; j++) {
 		bCounter[j]++;
@@ -1156,6 +1172,20 @@ void ProcessCommands(void)
 					bNumBytes = handle_version_command(cLocalRxBuffer, bCommandLength);
 					break;
 
+				case 'H':
+					DigitalWrite(PORT_LED, 0x01);
+					gReplyBuffer[0] = 'H';
+					gReplyBuffer[1] = '*';
+					bNumBytes = 2;
+					break;
+
+				case 'L':
+					DigitalWrite(PORT_LED, 0x00);
+					gReplyBuffer[0] = 'L';
+					gReplyBuffer[1] = '*';
+					bNumBytes = 2;
+					break;
+
 				default:
 					// seems to be an invalid command
 					bNumBytes = put_error_string_to_reply_buffer(SYNTAX_ERROR);
@@ -1174,10 +1204,22 @@ void ReportToHost(void)
 {
 	BYTE i = 0;
 	BOOL hasChanged = FALSE;
-	BYTE numberOfPorts = 0;
+
+	// Special case for the button
+	gPortValue[PORT_BUTTON] = DigitalRead(PORT_BUTTON);
+	if (gLastPortValue[PORT_BUTTON] != gPortValue[PORT_BUTTON]) {
+		if (gPortValue[PORT_BUTTON]) {
+			UART_PutChar('h');
+		} else {
+			UART_PutChar('l');
+		}
+		UART_PutChar('*');
+
+		gLastPortValue[PORT_BUTTON] = gPortValue[PORT_BUTTON];
+	}
 
 	for (i = 0; i < NUM_OF_PORTS; i++) {
-		if (gReportMask & ((DWORD)1 << (DWORD)i)) {
+		if (gReportMask & ((WORD)1 << (WORD)i)) {
 			switch (gPortMode[i]) {
 				case DIN_HIGH_Z:
 				case DIN_PULL_UP:
@@ -1209,10 +1251,10 @@ void ReportToHost(void)
 
 	UART_PutChar('R');
 	UART_PutSHexByte(gReportStartsFrom);
+	UART_PutSHexByte(gReportNumberOfPorts);
 
 	for (i = 0; i < NUM_OF_PORTS; i++) {
-		if (gReportMask & ((DWORD)1 << (DWORD)i)) {
-			numberOfPorts++;
+		if (gReportMask & ((WORD)1 << (WORD)i)) {
 			UART_PutSHexByte(gPortValue[i]);
 			gLastPortValue[i] = gPortValue[i];
 		}
@@ -1549,7 +1591,7 @@ void Initialize(void)
 	UART_Start(UART_PARITY_NONE);
 
 	SleepTimer_Start();
-	SleepTimer_SetInterval(SleepTimer_64_HZ);
+	SleepTimer_SetInterval(SleepTimer_512_HZ);
 	SleepTimer_EnableInt();
 
 #if 0
@@ -1563,6 +1605,11 @@ void Initialize(void)
 
 void Reboot(void)
 {
+	init_variables();
+
+	// wait for 8/512 = 15.625ms
+	SleepTimer_SyncWait(8, SleepTimer_WAIT_RELOAD);
+
 	if (Isain_adcLoaded()) {
 		// stop modules
 		AMUX4_0_Stop();
@@ -1624,4 +1671,7 @@ void Reboot(void)
 	
 		UnloadConfig_aout_servo_b();
 	}
+
+	// wait for 8/512 = 15.625ms
+	SleepTimer_SyncWait(8, SleepTimer_WAIT_RELOAD);
 }
