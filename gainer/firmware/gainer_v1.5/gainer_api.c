@@ -119,6 +119,44 @@ const BYTE bGainTable[16] = {
 	PGA_0_G48_0,	// GFx
 };
 
+/*
+ * Port scan pattern list
+ * ----: 0, 0, 0, 0, 0 ...
+ * ---0: 0, 0, 0, 0, 0 ...
+ * --1-: 1, 1, 1, 1, 1 ...
+ * --10: 0, 1, 0, 1, 0 ...
+ * -2--: 2, 2, 2, 2, 2 ...
+ * -2-0: 0, 2, 0, 2, 0 ...
+ * -21-: 1, 2, 1, 2, 1 ...
+ * -210: 0, 1, 0, 2, 0 ...
+ * 3---: 3, 3, 3, 3, 3 ...
+ * 3--0: 0, 3, 0, 3, 0 ...
+ * 3-1-: 1, 3, 1, 3, 1 ...
+ * 3-10: 0, 1, 0, 3, 0 ...
+ * 32--: 2, 3, 2, 3, 2 ...
+ * 32-0: 0, 2, 0, 3, 0 ...
+ * 321-: 1, 2, 1, 3, 1 ...
+ * 3210: 0, 1, 2, 3, 0 ...
+ */
+const BYTE gPortScanPatternList[16][4] = {
+	{ 0, 0, 0, 0 },	// DUMMY
+	{ 3, 3, 3, 3 },	// port 0, 0, 0, 0
+	{ 2, 2, 2, 2 },	// port 1, 1, 1, 1
+	{ 3, 2, 3, 2 },	// port 0, 1, 0, 1
+	{ 1, 1, 1, 1 },	// port 2, 2, 2, 2
+	{ 3, 1, 3, 1 },	// port 0, 2, 0, 2
+	{ 2, 1, 2, 1 },	// port 1, 2, 1, 2
+	{ 3, 2, 3, 1 },	// port 0, 1, 0, 2
+	{ 0, 0, 0, 0 },	// port 3, 3, 3, 3
+	{ 3, 0, 3, 0 },	// port 0, 3, 0, 3
+	{ 2, 0, 2, 0 },	// port 1, 3, 1, 3
+	{ 3, 2, 3, 0 },	// port 0, 1, 0, 3
+	{ 1, 0, 1, 0 },	// port 2, 3, 2, 3
+	{ 3, 1, 3, 0 },	// port 0, 2, 0, 3
+	{ 2, 1, 2, 0 },	// port 1, 2, 1, 3
+	{ 3, 2, 1, 0 }	// port 0, 1, 2, 3
+};
+
 enum {
 	PGA_REFERENCE_DGND,	// was PGA_REFERENCE_VSS
 	PGA_REFERENCE_AGND
@@ -131,8 +169,8 @@ enum {
 static BOOL gVerboseMode = FALSE;
 static char gReplyBuffer[32];
 static BYTE gPortScanMask = 0x00;
-static BYTE gPortScanNumber[2][4];
-static BYTE gPortScanLength[2];
+static BYTE gPortScanPattern[2];
+static BOOL gPortScanEnabled[2];
 static BYTE gAnalogInputMin[AIN_PORT_MAX + 1];
 static BYTE gAnalogInputMax[AIN_PORT_MAX + 1];
 static BYTE gPgaReference = PGA_REFERENCE_DGND;
@@ -227,6 +265,8 @@ void init_variables(void)
 	gReportStartsFrom = 0;
 	gReportNumberOfPorts = 0;
 	gReadyToReport = FALSE;
+
+	update_port_scan_info();
 }
 
 
@@ -545,6 +585,7 @@ void configure_port_adc(BYTE port, BYTE mode)
 
 	// enable port scan for the port
 	gPortScanMask |= (0x01 << port);
+	update_port_scan_info();
 
 	// enable specified port function
 	switch (mode) {
@@ -591,6 +632,7 @@ void configure_port_capsense(BYTE port, BYTE mode)
 
 	// enable port scan for the port
 	gPortScanMask |= (0x01 << port);
+	update_port_scan_info();
 
 	gPortMode[port] = mode;
 }
@@ -1009,22 +1051,11 @@ BYTE put_error_string_to_reply_buffer(BYTE errorCode)
 
 void update_port_scan_info(void)
 {
-	BYTE i = 0;
-	BYTE j = 0;
-	BYTE k = 0;
-	BYTE length = 0;
+	gPortScanPattern[0] = gPortScanMask & 0x0F;
+	gPortScanEnabled[0] = (gPortScanPattern[0] != 0);
 
-	for(k = 0; k < 2; k++) {
-		for (i = 0; i < 4; i++) {
-			if ((gPortScanMask & (0x01 << i)) != 0) {
-				gPortScanNumber[k][j] = i;
-				j++;
-				length++;
-			}	
-		}
-	
-		gPortScanLength[k] = length;
-	}
+	gPortScanPattern[1] = (gPortScanMask & 0xF0) >> 4;
+	gPortScanEnabled[1] = (gPortScanPattern[1] != 0);
 }
 
 
@@ -1040,22 +1071,22 @@ void SyncWait(void)
 void ScanInputs(void)
 {
 	static BYTE bWaitingForADC = FALSE;
-	static BYTE bCounter[2] = {0, 0};
-	static BYTE bAdcFlags[2] = {0x00, 0x00};
-	static WORD wAdcValue[8];
+	static BYTE bCounter = 0;
+	static WORD wAdcValue[4][2];
 
 	BYTE i = 0;
 	BYTE j = 0;	
 	BYTE port = 0;
+	BYTE value = 0;
 	BYTE a = 0;
 	BYTE b = 0;
 
 	if (!bWaitingForADC) {	
-		AMUX4_0_InputSelect(gPortScanNumber[0][bCounter[0]]);	// ain 0~3
-		AMUX4_1_InputSelect(gPortScanNumber[1][bCounter[1]]);	// ain 4~7
+		AMUX4_0_InputSelect(gPortScanPatternList[gPortScanPattern[0]][bCounter]);
+		AMUX4_1_InputSelect(gPortScanPatternList[gPortScanPattern[1]][bCounter]);
 		DUALADC_GetSamples(1);	// get one sample
 		bWaitingForADC = TRUE;	// set the flag to let CPU do other tasks
-									// DO NOT KEEP WAITING HERE!!
+								// DO NOT KEEP WAITING HERE!!
 		return;
 	} else {
 		// it seems that we are waiting for a data is available
@@ -1069,36 +1100,36 @@ void ScanInputs(void)
 		}
 	}
 
-	// port 0 ~ 3
-	wAdcValue[gPortScanNumber[0][bCounter[0]]] = DUALADC_iGetData1();
+	wAdcValue[bCounter][0] = DUALADC_iGetData1();			// port 0 ~ 3
+	wAdcValue[bCounter][1] = DUALADC_iGetData2ClearFlag();	// port 4 ~ 7
 
-	// port 4 ~ 7
-	wAdcValue[gPortScanNumber[1][bCounter[1]]] = DUALADC_iGetData2ClearFlag();
-
-	for (j = 0; j < 2; j++) {
-		bCounter[j]++;
-		if (bCounter[j] >= gPortScanLength[j]) {
-			bCounter[j] = 0;
-			bAdcFlags[j] |= ADC_SCAN_FINISHED;
-		}
+	bCounter++;
+	if (bCounter < 4) {
+		return;
 	}
 
 	for (j = 0; j < 2; j++) {
-		if ((bAdcFlags[j] & ADC_SCAN_FINISHED) == 0) {
+		if (!gPortScanEnabled[j]) {
 			continue;
 		}
 
-		for (i = 0; i < gPortScanLength[j]; i++) {
-			port = gPortScanNumber[j][bCounter[j]];
-			gPortValue[port] = wAdcValue[port] & 0x00FF;
+		for (i = 0; i < 4; i++) {
+			port = 3 - gPortScanPatternList[gPortScanPattern[j]][i] + (j * 4);
+			value = wAdcValue[i][j] & 0x00FF;
 
-			if (gPortMode[port] == AIN_ADC_LPF) {
+			if (gPortMode[port] == AIN_ADC) {
+				gPortValue[port] = value;
+			} else if (gPortMode[port] == AIN_ADC_LPF) {
 				// LPF processing
+				// NOT IMPLEMENTED
+				gPortValue[port] = value;
 			} else if (gPortMode[port] == AIN_ADC_HPF) {
 				// HPF processing
+				// NOT IMPLEMENTED
+				gPortValue[port] = value;
 			} else if (gPortMode[port] == AIN_ADC_PEAK_HOLD) {
-				gAnalogInputMin[port] = MIN(gAnalogInputMin[port], gPortValue[port]);
-				gAnalogInputMax[port] = MAX(gAnalogInputMax[port], gPortValue[port]);
+				gAnalogInputMin[port] = MIN(gAnalogInputMin[port], value);
+				gAnalogInputMax[port] = MAX(gAnalogInputMax[port], value);
 
 				if (PGA_REFERENCE_DGND == gPgaReference) {
 					gPortValue[port] = gAnalogInputMax[port];
@@ -1109,15 +1140,10 @@ void ScanInputs(void)
 				}
 			}
 		}
-		
-//		bAdcFlags[j] &= ~0x01;
 	}
 
-	if ((bAdcFlags[0] & ADC_SCAN_FINISHED) && (bAdcFlags[1] & ADC_SCAN_FINISHED)) {
-		gReadyToReport = TRUE;
-		bAdcFlags[0] &= ~ADC_SCAN_FINISHED;
-		bAdcFlags[1] &= ~ADC_SCAN_FINISHED;
-	}
+	bCounter = 0;
+	gReadyToReport = TRUE;
 }
 
 
@@ -1264,6 +1290,11 @@ void ReportToHost(void)
 
 	if (gReportMode == REPORT_ONCE) {
 		gReportMode = REPORT_NONE;
+	}
+
+	for (i = 0; i < 8; i++) {
+		gAnalogInputMax[i] = 0x00;
+		gAnalogInputMin[i] = 0xFF;
 	}
 }
 

@@ -33,58 +33,17 @@ void main()
 {
 	Initialize();
 
-	// set port mode for all pins
-	// configurations will be loaded automatically to place and init user modules
-	SetPortMode(0, AIN_ADC);
-	SetPortMode(1, AIN_ADC);
-	SetPortMode(2, AIN_ADC);
-	SetPortMode(3, AIN_ADC);
-	SetPortMode(4, DIN_PULL_DOWN);
-	SetPortMode(5, DIN_PULL_DOWN);
-	SetPortMode(6, DIN_PULL_DOWN);
-	SetPortMode(7, DIN_PULL_DOWN);
-	SetPortMode(8, AOUT_PSEUDO_ANALOG);
-	SetPortMode(9, AOUT_PSEUDO_ANALOG);
-	SetPortMode(10, AOUT_PSEUDO_ANALOG);
-	SetPortMode(11, AOUT_PSEUDO_ANALOG);
-	SetPortMode(12, AOUT_SERVO);
-	SetPortMode(13, AOUT_SERVO);
-	SetPortMode(14, AOUT_SERVO);
-	SetPortMode(15, AOUT_SERVO);
+    // Custom initization code
+	CustomInit();
+
 	SetPortMode(PORT_BUTTON, DIN_PULL_DOWN);
 	SetPortMode(PORT_LED, DOUT_STRONG);
-
 	DigitalWrite(PORT_LED, 0);
-
-#if 1
-	// set initial values (just for testing)
-	AnalogWrite(8, 1);
-	AnalogWrite(9, 32);
-	AnalogWrite(10, 128);
-	AnalogWrite(11, 255);
-	AnalogWrite(12, 1);
-	AnalogWrite(13, 64);
-	AnalogWrite(14, 126);
-	AnalogWrite(15, 254);
-#else
-	AnalogWrite(8, 0);
-	AnalogWrite(9, 0);
-	AnalogWrite(10, 0);
-	AnalogWrite(11, 0);
-	DigitalWrite(12, 0);
-	DigitalWrite(13, 0);
-	DigitalWrite(14, 0);
-	DigitalWrite(15, 0);
-#endif
 
 	PWM16_1_WritePeriod(2550);
 	PWM16_1_WritePulseWidth(2294);
 	PWM16_1_EnableInt();
 	PWM16_1_Start();
-
-    // Custom initization code.
-	CustomInit();
-    // End Initialize Project
 
 	while (1) {
 #if 0
@@ -92,19 +51,19 @@ void main()
 		SyncWait();
 #endif
 
-		// update input variables
+		// Update input variables
 		ScanInputs();
 
-		// Custom Post Input function
+		// Custom post input function
 		CustomPostInputUpdate();
 
-		// run transfer function and update output variables
+		// Process commands from the host
 		ProcessCommands();
 		
-		// report values to the host port if needed
+		// Report values to the host port if needed
 		ReportToHost();
 
-		// CustomPreOutputUpdate();
+		// Custom pre output update
 		CustomPreOutputUpdate();
 	}
 }
