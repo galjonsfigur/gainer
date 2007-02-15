@@ -10,33 +10,33 @@
 
 void CustomInit()
 {
-	// set port mode for all pins
-	// configurations will be loaded automatically to place and init user modules
+	// Set port mode for all ports
+	// Configurations will be loaded automatically to place and init user modules
 	SetPortMode(0, AIN_ADC);
 	SetPortMode(1, AIN_ADC);
 	SetPortMode(2, AIN_ADC);
 	SetPortMode(3, AIN_ADC);
-#if 0
 	SetPortMode(4, DIN_PULL_DOWN);
 	SetPortMode(5, DIN_PULL_DOWN);
 	SetPortMode(6, DIN_PULL_DOWN);
 	SetPortMode(7, DIN_PULL_DOWN);
-#else
-	SetPortMode(4, AIN_ADC);
-	SetPortMode(5, AIN_ADC);
-	SetPortMode(6, AIN_ADC);
-	SetPortMode(7, AIN_ADC);
-#endif
 	SetPortMode(8, AOUT_PSEUDO_ANALOG);
 	SetPortMode(9, AOUT_PSEUDO_ANALOG);
 	SetPortMode(10, AOUT_PSEUDO_ANALOG);
 	SetPortMode(11, AOUT_PSEUDO_ANALOG);
+#if 1
+	SetPortMode(12, DOUT_STRONG);
+	SetPortMode(13, DOUT_STRONG);
+	SetPortMode(14, DOUT_STRONG);
+	SetPortMode(15, DOUT_STRONG);
+#else
 	SetPortMode(12, AOUT_SERVO);
 	SetPortMode(13, AOUT_SERVO);
 	SetPortMode(14, AOUT_SERVO);
 	SetPortMode(15, AOUT_SERVO);
+#endif
 
-#if 1
+#if 0
 	// set initial values (just for testing)
 	AnalogWrite(8, 1);
 	AnalogWrite(9, 32);

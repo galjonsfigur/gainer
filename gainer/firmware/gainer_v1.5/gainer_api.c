@@ -213,6 +213,8 @@ void PWM16_1_ISR(void)
  */
 BYTE hex_to_byte(char *str);
 void byte_to_hex(BYTE value, char *str);
+void init_variables(void);
+void init_ports(void);
 void set_drive_mode_registers(BYTE port, BYTE v2, BYTE v1, BYTE v0);
 BOOL set_port_drive_mode(BYTE port, BYTE mode);
 BOOL is_valid_port_number(BYTE port, BYTE mode);
@@ -267,6 +269,16 @@ void init_variables(void)
 	gReadyToReport = FALSE;
 
 	update_port_scan_info();
+}
+
+
+void init_ports(void)
+{
+	BYTE i = 0;
+
+	for (i = 0; i < NUM_OF_PORTS; i++) {
+		SetPortMode(i, DIN_HIGH_Z);
+	}
 }
 
 
@@ -485,16 +497,19 @@ void configure_port_din(BYTE port, BYTE mode)
 		case DIN_HIGH_Z:
 			// configure the pin mode for the port to 'High Z'
 			set_port_drive_mode(port, HIGH_Z);
+			DigitalWrite(port, 0);
 			break;
 
 		case DIN_PULL_UP:
 			// configure the pin mode for the port to 'Pull Up'
 			set_port_drive_mode(port, PULL_UP);
+			DigitalWrite(port, 1);
 			break;
 
 		case DIN_PULL_DOWN:
 			// configure the pin mode for the port to 'Pull Down'
 			set_port_drive_mode(port, PULL_DOWN);
+			DigitalWrite(port, 0);
 			break;
 
 		default:
@@ -1631,6 +1646,8 @@ void Initialize(void)
 	PWM16_1_WritePulseWidth(2294);
 	PWM16_1_Start();
 #endif
+
+	init_ports();
 }
 
 
@@ -1702,6 +1719,8 @@ void Reboot(void)
 	
 		UnloadConfig_aout_servo_b();
 	}
+
+	init_ports();
 
 	// wait for 8/512 = 15.625ms
 	SleepTimer_SyncWait(8, SleepTimer_WAIT_RELOAD);

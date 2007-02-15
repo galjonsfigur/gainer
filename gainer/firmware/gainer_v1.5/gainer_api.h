@@ -46,20 +46,20 @@ enum port_number {
  * port mode
  */
 typedef enum {
-	NOT_INITIALIZED = 0,	// not initialized (reset state)
-	DIN_HIGH_Z,				// din: High Z
-	DIN_PULL_UP,			// din: Pull Up
-	DIN_PULL_DOWN,			// din: Pull Down
-	AIN_ADC,				// ain: A/D Converter
-	AIN_ADC_LPF,			// ain: A/D Converter with LPF
-	AIN_ADC_HPF,			// ain: A/D Converter with HPF
-	AIN_ADC_PEAK_HOLD,		// ain: A/D Converter with Peak Hold
-	AIN_CAPSENSE,			// ain: CapSense
-	DOUT_STRONG,			// dout: Strong
-	DOUT_OPEN_DRAIN_HIGH,	// dout: Open Drain High
-	DOUT_OPEN_DRAIN_LOW,	// dout: Open Drain Low
-	AOUT_PSEUDO_ANALOG,		// aout: Pseudo Analog (PRS PWM)
-	AOUT_SERVO,				// aout: RC Servo (50Hz PWM)
+	NOT_INITIALIZED = 0,	//  0: not initialized (reset state)
+	DIN_HIGH_Z,				//  1: din: High Z
+	DIN_PULL_UP,			//  2: din: Pull Up
+	DIN_PULL_DOWN,			//  3: din: Pull Down
+	AIN_ADC,				//  4: ain: A/D Converter
+	AIN_ADC_LPF,			//  5: ain: A/D Converter with LPF
+	AIN_ADC_HPF,			//  6: ain: A/D Converter with HPF
+	AIN_ADC_PEAK_HOLD,		//  7: ain: A/D Converter with Peak Hold
+	AIN_CAPSENSE,			//  8: ain: CapSense
+	DOUT_STRONG,			//  9: dout: Strong
+	DOUT_OPEN_DRAIN_HIGH,	// 10: dout: Open Drain High
+	DOUT_OPEN_DRAIN_LOW,	// 11: dout: Open Drain Low
+	AOUT_PSEUDO_ANALOG,		// 12: aout: Pseudo Analog (PRS PWM)
+	AOUT_SERVO,				// 13: aout: RC Servo (50Hz PWM)
 } GPortMode;
 
 void SyncWait(void);
