@@ -7,7 +7,7 @@
 #pragma interrupt_handler PWM16_1_ISR
 void PWM16_1_ISR(void);
 
-const char cVersionString[] = {'1','.','5','.','0','b','0','0'};
+const char cVersionString[] = {'1','.','5','.','0','b','0','1'};
 
 #define MIN(A,B)	(((A)<(B))?(A):(B))
 #define MAX(A,B)	(((A)>(B))?(A):(B))
@@ -176,8 +176,6 @@ static BYTE gAnalogInputMax[AIN_PORT_MAX + 1];
 static BYTE gPgaReference = PGA_REFERENCE_DGND;
 static WORD gReportMask = 0x0000;
 static BYTE gReportMode = 0;
-static BYTE gReportStartsFrom = 0;
-static BYTE gReportNumberOfPorts = 0;
 static BOOL gReadyToReport = FALSE;
 
 
@@ -212,7 +210,10 @@ void PWM16_1_ISR(void)
  * Prototypes for local functions (i.e. not user functions)
  */
 BYTE hex_to_byte(char *str);
+WORD hex_to_word(char *str);
 void byte_to_hex(BYTE value, char *str);
+BYTE count_enabled_bits(WORD bitMask);
+
 void init_variables(void);
 void init_ports(void);
 void set_drive_mode_registers(BYTE port, BYTE v2, BYTE v1, BYTE v0);
@@ -245,6 +246,15 @@ BYTE hex_to_byte(char *str)
 }
 
 
+WORD hex_to_word(char *str)
+{
+	BYTE h = hex_to_byte(str);
+	BYTE l = hex_to_byte(str + 2);
+
+	return ((h << 8) + l);
+}
+
+
 const char cHexString[16] = "0123456789ABCDEF";
 void byte_to_hex(BYTE value, char *str)
 {
@@ -258,14 +268,27 @@ void byte_to_hex(BYTE value, char *str)
 }
 
 
+BYTE count_enabled_bits(WORD bitMask)
+{
+	BYTE enabledBits = 0;
+	BYTE i = 0;
+
+	for (i = 0; i < 16; i++) {
+		if (bitMask & ((WORD)1 << (WORD)i)) {
+			enabledBits++;
+		}
+	}
+
+	return enabledBits;
+}
+
+
 void init_variables(void)
 {
 	gVerboseMode = FALSE;
 	gPortScanMask = 0x00;
 	gReportMask = 0x0000;
 	gReportMode = REPORT_NONE;
-	gReportStartsFrom = 0;
-	gReportNumberOfPorts = 0;
 	gReadyToReport = FALSE;
 
 	update_port_scan_info();
@@ -824,30 +847,54 @@ BYTE handle_port_mode_command(char *p, BYTE length)
 }
 
 
-// {W}+{00..FF: port number}+{0..F: number of ports}+{00..FF: value 0}...{00..FF: value n}
-// e.g. W022F83Css* (set port 02 and 03 to0xF8 and 0x3C)
+// {W}+{0000..FFFF: port bit mask}+{00..FF: value 0}...{00..FF: value n}+{00..FF: checksum}
+// e.g. W000CF83Css* (set port 02 and 03 to0xF8 and 0x3C)
+// e.g. W000Css* (set port 02 and 03 to high)
+
+#define COMMAND_LENGTH_WRITE_BITMASK 7
 
 BYTE handle_write_command(char *p, BYTE length)
 {
 	BYTE i = 0;
-	BYTE port = 0;
+	BYTE readPorts = 0;
 	BYTE numberOfPorts = 0;
 	BYTE value = 0;
-
+	WORD bitMask = 0x0000;
+	
 	// calc checksum, then compare
 	if (!is_checksum_ok(p, length)) {
 		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
 	}
 
-	numberOfPorts = HEX_TO_BYTE(*(p + 3));
-	if (length != (4 + (numberOfPorts * 2) + 2)) {
-		return put_error_string_to_reply_buffer(SYNTAX_ERROR);
-	}
+	// 01234....
+	// W000C....
+	//  ^^^^
+	bitMask = hex_to_word(p + 1);
 
-	port = hex_to_byte(p + 1);
-	for (i = 0; i < numberOfPorts; i++) {
-		value = hex_to_byte(p + 5 + (i * 2));
-		AnalogWrite(port + i, value);
+	if (length == COMMAND_LENGTH_WRITE_BITMASK) {
+		for (i = 0; i < NUM_OF_PORTS; i++) {
+			if (bitMask & ((WORD)1 << (WORD)i)) {
+				DigitalWrite(i, 1);
+			} else {
+				DigitalWrite(i, 0);
+			}
+		}
+	} else {
+		numberOfPorts = count_enabled_bits(bitMask);
+		if (length != (5 + (numberOfPorts * 2) + 2)) {
+			return put_error_string_to_reply_buffer(SYNTAX_ERROR);
+		}
+
+		// 0123456..
+		// W000CF8..
+		//      ^^
+		for (i = 0; i < NUM_OF_PORTS; i++) {
+			if (bitMask & ((WORD)1 << (WORD)i)) {
+				value = hex_to_byte(p + 5 + (readPorts * 2));
+				AnalogWrite(i, value);
+				readPorts++;
+			}
+		}
 	}
 
 	// echo the command
@@ -860,9 +907,9 @@ BYTE handle_write_command(char *p, BYTE length)
 }
 
 
-// {R}+{0..3: stop, once, always, when changed}+{00..FF: port number}+{00..FF: number of ports}+{00..FF: checksum}
-// e.g. r30004ss (notify when changed, port 0 to 3)
-// e.g. r0ss (stop reading)
+// {R}+{0..3: stop, once, always, when changed}+{0000..FFFF: port mask}+{00..FF: checksum}
+// e.g. R3000Fss (notify when changed: port 0, 1, 2 and 3)
+// e.g. R0ss (stop reading)
 #define COMMAND_LENGTH_READ 8
 #define COMMAND_LENGTH_READ_STOP 4
 
@@ -870,14 +917,15 @@ BYTE handle_read_command(char *p, BYTE length)
 {
 	BYTE i = 0;
 	BYTE mode = 0;
-	BYTE startsFrom = 0;
-	BYTE numberOfPorts = 0;
 
 	// calc checksum, then compare
 	if (!is_checksum_ok(p, length)) {
 		return put_error_string_to_reply_buffer(CHECKSUM_ERROR);
 	}
 
+	// 01...
+	// R3...
+	//  ^
 	mode = HEX_TO_BYTE(*(p + 1));
 
 	switch (mode) {
@@ -902,17 +950,16 @@ BYTE handle_read_command(char *p, BYTE length)
 		case REPORT_ONCE:
 		case REPORT_ALWAYS:
 		case REPORT_WHEN_CHANGED:
-			startsFrom = hex_to_byte(p + 2);
-			numberOfPorts = hex_to_byte(p + 4);
 			if (length != COMMAND_LENGTH_READ) {
 				return put_error_string_to_reply_buffer(SYNTAX_ERROR);
 			} else {
 				gReportMode = mode;
-				gReportMask = 0x0000;
-				gReportStartsFrom = startsFrom;
-				gReportNumberOfPorts = numberOfPorts;
-				for (i = startsFrom; i < (startsFrom + numberOfPorts); i++) {
-					gReportMask |= ((WORD)1 << (WORD)i);
+				gReportMask = hex_to_word(p + 2);
+				for (i = 0; i < NUM_OF_PORTS; i++) {
+					if ((gReportMask & ((WORD)1 << (WORD)i)) == 0) {
+						continue;
+					}
+
 					switch (gPortMode[i]) {
 						case DIN_HIGH_Z:
 						case DIN_PULL_UP:
@@ -1291,8 +1338,7 @@ void ReportToHost(void)
 	}
 
 	UART_PutChar('R');
-	UART_PutSHexByte(gReportStartsFrom);
-	UART_PutSHexByte(gReportNumberOfPorts);
+	UART_PutSHexInt(gReportMask);
 
 	for (i = 0; i < NUM_OF_PORTS; i++) {
 		if (gReportMask & ((WORD)1 << (WORD)i)) {
@@ -1316,6 +1362,15 @@ void ReportToHost(void)
 
 BOOL DigitalWrite(BYTE port, BYTE value)
 {
+	// JUST FOR DEBUGGING
+#if 0
+	UART_PutChar('w');
+	UART_PutSHexByte(port);
+	UART_PutChar(',');
+	UART_PutSHexByte(value);
+	UART_PutChar(' ');
+#endif
+
 	switch (port) {
 		case 0:
 			digital_write_00(value);
