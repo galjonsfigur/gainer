@@ -1,0 +1,142 @@
+変更点(覚えているだけ)
+
+■共通
+・Voidをvoidに変更
+・package gainerへの所属
+・instanceofをisに変更
+・引数や匿名関数やiなどになるべく型を指定
+・イベント絡みをすべて見直し(AS2→AS3での変更点多数)
+・ソースコードレベル互換性のため、Gainer.onReady/onReceived/onPressed/onReleasedはpublic var onXXX:Functionとして定義した
+
+
+■SerialPort.as
+22:
+イベントモデル変更に伴い
+		socket.onXML = function(src:XML) {
+			scope.onReceiveStr(src.toString());
+		};
+を
+		socket.addEventListener(DataEvent.DATA, function(src) {
+			var xml:XML = new XML(src);
+			scope.onReceiveStr(xml.toString());
+		});
+に書き換え
+
+21:
+イベントモデル変更に伴い
+		socket.onConnect = function(success:Boolean) {
+			if (success) {
+				trace("connected to the server");
+				scope.onConnected();
+			} else {
+				trace("connection failed");
+			}
+		};
+を
+		socket.addEventListener(Event.CONNECT, function(success:Boolean) {
+			if (success) {
+				trace("connected to the server");
+				scope.onConnected();
+			} else {
+				trace("connection failed");
+			}
+		});
+に書き換え
+
+36:
+メソッドを動的に書き換えるとエラーになるので変数化
+	public function onReceiveStr(str:String) {
+	}
+を
+		public var onReceiveStr:Function;
+に書き換え
+
+39:
+メソッドを動的に書き換えるとエラーになるので変数化
+	public function onConnected() {
+	}
+を
+		public var onConnected:Function;
+に書き換え
+
+
+■Gainer.as
+206:
+public function serialEvent(str:String)
+の最後で
+dispatchEvent({type:"onReceived", sReturn:sReturn});
+を使ってイベントを発生させてるけど、このメソッドの最初に実行しているのでいらない気がする(未検証)のでコメントアウト。
+
+analogOutput()の第2パラメータはサンプルコードでも使ってないので、デフォルト値を当てておく
+
+■CommandQueue.as
+ぜんぜん自信ないけど
+	import mx.events.EventDispatcher;
+を
+	import flash.events.EventDispatcher;
+に書き換え
+
+
+initializeメソッドが無いと怒られるので
+function CommandQueue()
+内の
+EventDispatcher.initialize(this);
+をコメントアウト
+※これをコメントアウトするならimportで指定する必要はないかも
+
+■GainerCommand.as
+CommandQueue.asの変更点に加え
+
+GainerCommandを継承しているSynchronizedGCから_gainerメンバ変数へアクセスしているので、
+		private var _gainer:Gainer;
+を
+		protected var _gainer:Gainer;
+に変更
+
+
+■Sleep.as
+GainerCommand.asを継承する実装となっているが、SleepクラスのコンストラクタではGainerCommandの
+コンストラクタを呼ぶためのパラメータが足りないのでどうしたものか・・・
+要はキューの順序でスリープさせたいだけなら、GainerCommandを継承する必要は無いのかも。
+CommandQueue.dequeue()も変更する前提で、GainerCommandからの継承はあきらめる。
+
+	class Sleep extends GainerCommand{
+を
+	class Sleep {
+に変更。
+
+		override public function sendMsg():void {
+を
+		public function sendMsg():void {
+に変更。
+
+		public var dispatchEvent:Function;
+追加
+
+■CommandQueue.as
+
+Sleepの実装変更に伴い
+		public function dequeue()
+に
+				} else if(cmd instanceof Sleep) {
+					cmd.addEventListener("onSuccess", this);
+					cmd.addEventListener("onFailed", this);
+					cmd.sendMsg();
+				}
+を追加
+
+■Timer.as
+グローバル関数ではなくなったので
+	import flash.utils.clearInterval;
+	import flash.utils.setInterval;
+を追加。
+
+
+■ReturnEvent.as
+SynchronizedGC用のイベントとしてReturnEventを新設
+
+あと、なにしたか忘れたけどいろいろ
+
+
+
+

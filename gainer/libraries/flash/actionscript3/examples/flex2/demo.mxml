@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" applicationComplete="init();" width="427" height="263">
+	<mx:Script source="demo.as" />
+
+	<mx:Button x="10" y="10" label="LED ON" id="ledonbutton" click="led_on();"/>
+	<mx:Button x="86" y="10" label="LED OFF" id="ledoffbutton" click="led_off();"/>
+	<mx:Text x="10" y="40" text="On board button status"/>
+	<mx:Text x="146" y="40" text="no action" id="onBoardStatusText"/>
+	<mx:CheckBox x="10" y="66" label="dout 0" id="do0" click="dOut();"/>
+	<mx:CheckBox x="10" y="92" label="dout 1" id="do1" click="dOut();"/>
+	<mx:CheckBox x="10" y="118" label="dout 2" id="do2" click="dOut();"/>
+	<mx:CheckBox x="10" y="144" label="dout 3" id="do3" click="dOut();"/>
+	<mx:Text x="146" y="66" text="aout 0"/>
+	<mx:Text x="146" y="92" text="aout 1"/>
+	<mx:Text x="146" y="118" text="aout 2"/>
+	<mx:Text x="146" y="144" text="aout 3"/>
+	<mx:HSlider x="195" y="66" id="ao0" minimum="0" maximum="255" mouseMove="aOut();"/>
+	<mx:HSlider x="195" y="92" id="ao1" minimum="0" maximum="255" dragExit="aOut();"/>
+	<mx:HSlider x="195" y="118" id="ao2" minimum="0" maximum="255" click="aOut();"/>
+	<mx:HSlider x="195" y="144" id="ao3" minimum="0" maximum="255" mouseMove="aOut();"/>
+	<mx:Text x="146" y="172" text="Disable" id="dInText"/>
+	<mx:Text x="146" y="196" text="Disable" id="aInText"/>
+	<mx:RadioButtonGroup id="inputType" />
+	<mx:RadioButton x="10" y="172" label="Digital input" groupName="inputType" selected="true" value="digital" change="switchBeginInput();" />
+	<mx:RadioButton x="10" y="196" label="Analog input" groupName="inputType" value="analog" change="switchBeginInput();" />
+	
+</mx:Application>
