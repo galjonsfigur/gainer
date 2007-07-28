@@ -1,19 +1,23 @@
 import gainer.Gainer;
 import flash.utils.Timer;
 import flash.events.TimerEvent;
-		public var gnr:Gainer = new Gainer("localhost", 2000, Gainer.MODE1, true);public var inputTimer:Timer;
+		public var gnr:Gainer;public var inputTimer:Timer;
+public var timingTimer:Timer;
+
+//scan input status per delay_msec
+public var delay_msec:Number = 1000;
+//show input timing
+public var timing_delay_msec:Number = 100;
+
 
 public function init():void
 {
+	gnr = new Gainer("localhost", 2000, Gainer.MODE1, true);
+	gnr.onReady = initBeginInput;
+	
 	//same button.as
 	gnr.onPressed = on_board_button_pressed;
 	gnr.onReleased = on_board_button_released;
-	
-	switchBeginInput();
-	var delay_msec:Number = 1000;
-	inputTimer = new Timer(delay_msec, 0);
-	inputTimer.addEventListener(TimerEvent.TIMER, switchInput);
-	inputTimer.start();
 }
 				public function led_on():void{	//same led.as
 	gnr.turnOnLED();}		public function led_off():void{	//same led.as
@@ -64,28 +68,54 @@ public function dIn():void
 		dString += "dIn" + i.toString() + ":" + gnr.digitalInput[i] + "  ";
 	}
 	dInText.text = dString;}
+public function initBeginInput():void
+{
+	switchBeginInput();
+
+	inputTimer = new Timer(delay_msec, 0);
+	inputTimer.addEventListener(TimerEvent.TIMER, switchInput);
+	inputTimer.start();
+
+	timingTimer = new Timer(timing_delay_msec, 1);
+	timingTimer.addEventListener(TimerEvent.TIMER, hideTiming);
+}
+
 private function switchBeginInput():void
 {
 	if("digital" == inputType.selectedValue)
 	{
 		gnr.endAnalogInput();
 		gnr.beginDigitalInput();
-		aInText.text = "Disable";
 	}
 	else
 	{
 		gnr.endDigitalInput();
 		gnr.beginAnalogInput();
-		dInText.text = "Disable";
 	}}
 private function switchInput(dummy:TimerEvent):void
 {
+	showTiming();
 	if("digital" == inputType.selectedValue)
 	{
 		dIn();
+		aInText.text = "Disable";
 	}
 	else
 	{
 		aIn();
+		dInText.text = "Disable";
 	}
+}
+
+private function showTiming():void
+{
+	timingTimer.start();
+	timingText.text = "Refresh input status";
+}
+
+private function hideTiming(dummy:TimerEvent):void
+{
+	timingTimer.stop();
+	timingTimer.reset();
+	timingText.text = "";
 }

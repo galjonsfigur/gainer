@@ -1,0 +1,1 @@
+C:\flex_sdk_2\bin\mxmlc C:\tool\gainer\repos\trunk\gainer\libraries\flash\actionscript3\demo.mxml
