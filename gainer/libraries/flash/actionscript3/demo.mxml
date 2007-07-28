@@ -21,8 +21,8 @@
 	<mx:Text x="146" y="172" text="Disable" id="dInText"/>
 	<mx:Text x="146" y="196" text="Disable" id="aInText"/>
 	<mx:RadioButtonGroup id="inputType" />
-	<mx:RadioButton x="10" y="172" label="Digital input" groupName="inputType" selected="true" value="digital" change="switchBeginInput();" />
-	<mx:RadioButton x="10" y="196" label="Analog input" groupName="inputType" value="analog" change="switchBeginInput();" />
+	<mx:RadioButton x="10" y="172" label="Digital input" groupName="inputType" selected="false" value="digital" click="switchBeginInput();"/>
+	<mx:RadioButton x="10" y="196" label="Analog input" groupName="inputType" value="analog" click="switchBeginInput();" selected="true"/>
 	<mx:Text x="10" y="222" id="timingText" text="no action"/>
 	
 </mx:Application>

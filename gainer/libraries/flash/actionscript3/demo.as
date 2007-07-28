@@ -55,7 +55,7 @@ public function aIn():void
 {
 	//same ain.as
 	var aString:String = "";
-	for (var i:Number=0; i<gnr.digitalInput.length; i++) {
+	for (var i:Number=0; i<gnr.analogInput.length; i++) {
 		aString += "aIn" + i.toString() + ":" + gnr.analogInput[i] + "  ";
 	}
 	aInText.text = aString;}
