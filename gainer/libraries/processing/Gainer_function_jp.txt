@@ -1,83 +1,62 @@
 -----------Gainer 変数一覧----------------------
 
-コンフィグレーション
-MODE1
-MODE2
-MODE3
-MODE4
-MODE5
-MODE6
-MODE7
-MODE8
 
-グランド
-AGND
-GND
-DGND
+コンフィグレーション
+MODE1 ain 4: din 4: aout 4: dout 4 
+MODE2 ain 8: din 0: aout 4: dout 4
+MODE3 ain 4: din 4: aout 8: dout 0
+MODE4 ain 4: din 4: aout 4: dout 4
+MODE5 ain 8: din 0: aout 8: dout 0
+MODE6 ain 0: din 16: aout 0: dout 0
+MODE7 ain 0: din 0: aout 0: dout 16
+MODE8 ain 0: din 0: aout 8: dout 8
+
 
 入力
-buttonPressed
-analogInput[]
-digitalInput[]
+buttonPressed <boolean>
+analogInput[] <int>
+digitalInput[] <boolean>
 
 
 --------------------------------------------------
 
 
-------------Gainer 関数一覧----------------------------
+------------Gainer ハンドラ 関数一覧----------------------------
 
-デバック
-DEBUG()
-gainerのプロトコルを出力する
+gainerButtonUpdated(boolen pressed)
+ボタンの状態が変化した
+gainerDigitalInputUpdated(boolean[] values)
+DigitalInputが変化した
+gainerAnalogInputUpdated(int[] values)
+analogInputが変化した
+----------------------------------------------------------
 
 
-ポートの名前
-すべてのシリアルポートの名前を列挙する
-String[] list()
 
-
-コンストラクタ
+---------------コンストラクタ---------------------------
 
 　ポートの名前を指定しないGainerオブジェクトの作成
 　起動時のコンフィグレーションを指定する。Default　MODE1
+Gainer(PApplet parent, int mode, boolean verb)
+Gainer(PApplet parent, boolean verb)
+Gainer(PApplet parent, int mode)
 Gainer(PApplet parent)
-Gainer(PApplet parent,int mode)
-Gainer(PApplet parent,boolean verbose)
-Gainer(PApplet parent,int mode,boolean verbose)
-　Mac　最初に見つかったGainerを自動選択する
-　Win　COM3に固定される
-　おしゃべりモード verbose デフォルトはfalse
-　モード設定       mode    デフォルトはMODE1
 
 　ポートの名前を指定してGainerオブジェクトの作成
-　起動時のコンフィグレーションを指定する。Default　MODE1
-Gainer(PApplet parent, String iname)
-Gainer(PApplet parent, String iname,int mode)
-Gainer(PApplet parent, String ineme,boolean verbose)
-Gainer(PApplet parent, String iname,int mode,boolean verbose)
+Gainer(PApplet parent, String pname,int mode,boolean verb)
+Gainer(PApplet parent, String pname)
+Gainer(PApplet parent, String pname, int mode)
+Gainer(PApplet parent, String pname, boolean verb){
 
-　名前             iname   シリアルボートの名前を指定する
-　おしゃべりモード verbose デフォルトはfalse
-　モード設定       mode    デフォルトはMODE1
+モード設定       mode    デフォルトはMODE1
+おしゃべりモード verbose デフォルトはfalse
+ポートの名前指定 pname   指定しない場合は自動認識
 
-
-コンフィグレーション
-
-//     ain :din :aout:dout
-//     ----:----:----:----
-// C0:    0:   0:   0:   0
-// C1:    4:   4:   4:   4
-// C2:    8:   0:   4:   4
-// C3:    4:   4:   8:   0
-// C4:    8:   0:   8:   0	
-// C5:    0:  16:   0:   0	
-// C6:    0:   0:   0:  16
-// C7: LED matrix control???	未実装
-// C8: CapSense???		未実装
-void configuration(int mode)
+---------------------------------------------------------
 
 
-LED
+
+------------LED--------------------------------------------
 
 LED を点灯する "h*"
 void turnOnLED()
@@ -85,8 +64,9 @@ void turnOnLED()
 LED をけす "l*"
 void turnOffLED()
 
+--------------------------------------------------------------
 
-デジタルポート
+--------------デジタルポート------------------------------------
 
 一度だけデジタルポートの状態をdigitalInput[]に得る 
 void peekDigitalInput()
@@ -108,8 +88,9 @@ void setHigh(int[] chs)
 デジタルポートの状態をLowにする
 void setLow(int ch)
 void setLow(int[] chs)
+-------------------------------------------------------------------
 
-アナログポート
+-------------------アナログポート---------------------------------
 
 一度だけアナログポートの状態をanalogInput[]に得る 
 void peekAnalogInput()
@@ -124,24 +105,19 @@ void endAnalogInput()
 void analogOutput(int ch,int value)
 void analogOutput(int[] value)
 
+
 アナログポートのサンプリングチャンネルの設定
-void analogHighSampling()
+void analogSamplingSingleChannel()
 高速サンプリング　ただしポート０のみ
-void analogAllSampling()
+void analogSamplingAllChannels()
 すべてのチャンネルをサンプリングする(デフォルト)
 
+---------------------------------------------------------------------
 
+---------アンプ---------------------------------------
 ゲイン　+2.5Vが中心 "G1x"
 void ampGainAGND(int gain)
 
 ゲイン　0Vが中心  "G0x"
 void ampGainDGND(int gain)
-
-
-再起動
-void reboot()
-
-
-MODE7のみ　マトリックスLEDのラインに出力する
-void scanLine(int line,int[] values)
-void scanMatrix(int[] values)
+-------------------------------------------------------

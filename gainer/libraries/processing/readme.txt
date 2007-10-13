@@ -20,6 +20,11 @@ There are examples for Gainer library. You can copy contents into processing exa
 
 Revision History
 
+2007/10.13 (1-0-1-01)
+*change handler  "gainerButtonEvent" -> "gainerButtonUpdated"
+*add handler "gainerAnalogInputUpdated"
+*add handler "gainerDigitalInputUpdated"
+
 2006/05.26 (1-0-0-15)
 *change waiting for peek command
 *change constractor
