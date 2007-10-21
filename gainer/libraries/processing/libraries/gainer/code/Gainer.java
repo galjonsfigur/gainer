@@ -1,272 +1,290 @@
 /**
  * GAINER control libray
  * @author PDP Project
- * @version 1.0
+ * @version 1.0.1
  */
 
-/*
- firmware updateの時
-1 firmVersionの文字を書き換える
-*/
-
 package processing.gainer;
-import processing.core.*;
 
-import gnu.io.*;
+import processing.core.*;
+import gnu.io.SerialPort;
+import gnu.io.SerialPortEvent;
+import gnu.io.SerialPortEventListener;
+
+import java.lang.reflect.*;
+import java.util.TooManyListenersException;
 
 import java.io.*;
-import java.util.*;
-import java.lang.reflect.*;
 
-
-public class Gainer implements SerialPortEventListener {
-
-  PApplet parent;
-  Method serialEventMethod;
-  
-  Method gainerButtonEventMethod;
-  //Method gainerAnalogInEventMethod;
-  
-
-  public SerialPort port;
-  
-  private Digital digital;
-  private Analog analog;
-  
-  private boolean WINDOWS = true;
-  
-  public final String libVersion = "1.0";
-  public String deviceVersion;
-
-  private int currentMode = 0;
-  public final static int MODE1 = 1;
-  public final static int MODE2 = 2;
-  public final static int MODE3 = 3;
-  public final static int MODE4 = 4;
-  public final static int MODE5 = 5;
-  public final static int MODE6 = 6;
-  public final static int MODE7 = 7;
-  public final static int MODE8 = 8;
-
-  public final static boolean AGND = true;
-  //public final static boolean V2_5 = true;
-  public final static boolean GND = false;
-  public final static boolean DGND = false;
-  //public final static boolean V0_0 = false;
-
-  private final int rate=38400;
-  private final int parity=SerialPort.PARITY_NONE;
-  private final int databits=8;
-  private final int stopbits=SerialPort.STOPBITS_1;
-
-  public boolean buttonPressed=false;
-  public int[] analogInput;
-  public boolean[] digitalInput;
-
-	private static boolean verbose;
-
-  private boolean analogSeq = false;
-  private boolean digitalSeq = false;
+public final class Gainer {
 	
-  private String sReturn;
-  private final int TIMEOUT = 100;
-
-  public InputStream input;
-  public OutputStream output;
-
-  //byte buffer[] = new byte[32768];
-  byte buffer[] = new byte[64];
-  int bufferIndex;
-  int bufferLast;
-
-  int bufferSize = 1;  // how big before reset or event firing
-
-  static private boolean DEBUG = false;
-  private static String dname = "COM3";
-  private static int dmode = MODE1;
+	PApplet parent;
+	Method gainerButtonEventMethod;
+	Method gainerDigitalInputMethod;
+	Method gainerAnalogInputMethod;
+	
+	//外部から参照します
+	
+	//ファームのバージョン[1.0.1.*]にマッチする
+	public static final String libraryVersion = "1.0.1";
+	
+	public boolean buttonPressed = false;
+	public int[] analogInput;
+	public boolean[] digitalInput;
+  public int[] analogOutput;
+  public boolean[] digitalOutput;
   
-
-
-	//名前を指定しない初期化
-  public Gainer(PApplet parent) {
-    this(parent,dmode,false);
-  }
+  public static final int MODE1 = 1;
+  public static final int MODE2 = 2;
+  public static final int MODE3 = 3;
+  public static final int MODE4 = 4;
+  public static final int MODE5 = 5;
+  public static final int MODE6 = 6;
+  public static final int MODE7 = 7;
+  public static final int MODE8 = 8;
   
-  public Gainer(PApplet parent,boolean verb){
-  	this(parent,dmode,verb);
-  }
   
-  public Gainer(PApplet parent,int mode){
-  	this(parent,mode,false);
-  }
+	private boolean currentVerbose;
+	
   
-  //名前を指定しない初期化 mode指定
-  public Gainer(PApplet parent,int mode,boolean verb){
-    try {
-      Enumeration portList = CommPortIdentifier.getPortIdentifiers();
-      while (portList.hasMoreElements()){
-        CommPortIdentifier portId =(CommPortIdentifier) portList.nextElement();
-        if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
-          //System.out.println("found name  " + portId.getName());
-          String pname = portId.getName();
-          if(pname.startsWith("/dev/cu.usbserial-")){
-            WINDOWS = false;
-            dname = pname;
-            
-          }else if(pname.startsWith("COM")){
-            WINDOWS = true;
-          }
-        }
-      }
-    }catch (Exception e) {
-      errorMessage("<get serial name>", e);
-      e.printStackTrace();
-      
-      port = null;
-      input = null;
-      output = null;
-    }
-    
-    initialize(parent,dname,mode,verb);
-  }
-
-  public Gainer(PApplet parent,String iname){
-    this(parent, iname ,dmode,false);
-  }
+	private final Client client;
+	private SerialTokenizer serialtokenizer=null;
 	
 
-  public Gainer(PApplet parent,String iname,int mode) {
-    initialize(parent,iname,mode,false);
-  }
-  
-  public Gainer(PApplet parent,String iname,boolean verb){
-  	initialize(parent,iname,dmode,verb);
-  }
-  
-  public Gainer(PApplet parent,String iname,int mode,boolean verb) {
-    initialize(parent,iname,mode,verb);
-  }
-	
-	private void initialize(PApplet parent, String iname,int mode,boolean verb){
+	public static boolean DEBUG = false;
 
-    
-    this.parent = parent;
-    //parent.attach(this);
+	public Gainer(PApplet parent, int mode, boolean verb){
+		this.parent = parent;
+		
+		client = new Client();
+		if(client.findGainer()){
+			serialtokenizer = new SerialTokenizer(this,client.port);
+			initialize(mode,verb);
+			
 
-    digital = new Digital(this);
-    analog = new Analog(this);
-
-    
-    try {
-      Enumeration portList = CommPortIdentifier.getPortIdentifiers();
-      System.out.println(" ");
-      System.out.println("selected port name "+iname);
-      
-      while (portList.hasMoreElements()) {
-        CommPortIdentifier portId =
-          (CommPortIdentifier) portList.nextElement();
-
-        if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
-          //System.out.println("found name" + portId.getName());
-          if (portId.getName().equals(iname)) {
-            System.out.println("serial port opening ...");
-            
-            port = (SerialPort)portId.open("serial gainer", 2000);
-            input = port.getInputStream();
-            output = port.getOutputStream();
-            port.setSerialPortParams(rate, databits, stopbits, parity);
-            port.addEventListener(this);
-            port.notifyOnDataAvailable(true);
-            
-            
-            
-          }
-        }
-      }
-
-    } catch (Exception e) {
-    	System.out.println("initialize error "+e);
-      errorMessage("<init>", e);
-      e.printStackTrace();
-      port = null;
-      input = null;
-      output = null;
-    }
-
-    parent.registerDispose(this);
-
-     try {
-
-      gainerButtonEventMethod = 
-        parent.getClass().getMethod("gainerButtonEvent",
-                                    new Class[] { Boolean.TYPE });
-    } catch (Exception e) {
-      // no such method, or an error.. which is fine, just ignore
-    }
-    
-    buffer(64);
-    reboot();
-    
-    getDeviceVersion();
-    verbose = verb;
-    setVerbose(verbose);
-    configuration(mode);
-    currentMode = mode;
-    
-    System.out.println("Gainer ready to Roll. ");
-	}
-
-	private void getDeviceVersion(){
-		this.write("?*");
-		try{
-		Thread.sleep(100);
-		}catch(Exception e){
-			System.out.println(e);
+		}else{
+			errorMessage("Gainer not found !!");
 		}
-		deviceVersion = sReturn.substring(1,9);
-		System.out.println("Gainer firmware ver.   :" + deviceVersion);
-		System.out.println("Processing library ver.:" + libVersion + ".*.*");
-		if(!deviceVersion.startsWith(libVersion) ){
-			throw new RuntimeException("Gainer error!! please check firmware version");
-		}	
 	}
+	
+	public Gainer(PApplet parent, boolean verb){
+		this(parent,MODE1,verb);
+	}
+	
+	public Gainer(PApplet parent, int mode){
+		this(parent,mode,false);
+	}
+	
+	public Gainer(PApplet parent){
+		this(parent,MODE1,false);
+	}
+	
+	public Gainer(PApplet parent, String pname,int mode,boolean verb){
+		this.parent = parent;
+		
+		client = new Client();
+		if(client.openGainer(pname)){
+			serialtokenizer = new SerialTokenizer(this,client.port);
+			initialize(mode,verb);
+			
+		}else{
+			errorMessage("Gainer not found !!");
+			
+		}
 
+	}
+	
+	public Gainer(PApplet parent, String pname){
+		this(parent,pname,MODE1,false);
+	}
+	
+	public Gainer(PApplet parent, String pname, int mode){
+		this(parent,pname,mode,false);
+	}
+	
+	public Gainer(PApplet parent, String pname, boolean verb){
+		this(parent,pname,MODE1,verb);
+	}
+	
+	public void dispose(){
+		reboot();
+		client.cleanSerialPort();
+	}
+	
+	//メッセージを表示して終了
+	private void errorMessage(String message){
+		System.out.println(message);
+		System.exit(-1);
+	}
+	
+	//
+	private void interpretCode(String code){
+		
+		StringBuffer codeBuffer = new StringBuffer(code); 
+		while(codeBuffer.indexOf("*")!=-1){
+			String iCode = codeBuffer.substring(0, codeBuffer.indexOf("*"));
+			codeBuffer.delete(0, codeBuffer.indexOf("*")+1);
+		
+			if(iCode.startsWith("i")||iCode.startsWith("I")){
+				
+				String value;
+				for(int i=0;i<analogInput.length;i++){
+					value = iCode.substring(2*i+1,2*(i+1)+1);
+					analogInput[i] = Integer.parseInt(value,16);
+				}
+				
+				if(gainerAnalogInputMethod != null){
+					try{
+						gainerAnalogInputMethod.invoke(parent,new Object[]{ analogInput });
+					}catch(Exception e){
+						e.printStackTrace();
+						gainerAnalogInputMethod = null;
+						errorMessage("GainerAnalogInputEvent error!!");
+					}
+				}
+				
+			}else if(iCode.startsWith("r")||iCode.startsWith("R")){
+
+				int value = Integer.parseInt(iCode.substring(1,5),16);
+				for(int i=0;i<digitalInput.length;i++){
+					int c = 1&(value>>i);
+					if(c==1){
+						digitalInput[i] = true;
+					}else{
+						digitalInput[i] = false;
+					}
+				}
+				if(gainerDigitalInputMethod != null){
+					try{
+						gainerDigitalInputMethod.invoke(parent,new Object[]{ digitalInput });
+					}catch(Exception e){
+						e.printStackTrace();
+						gainerDigitalInputMethod = null;
+						errorMessage("GainerDigitalInputEvent error!!");
+					}
+				}
+
+			}else if(iCode.startsWith("N")){
+				buttonPressed = true;
+				createButtonEvent();
+				
+			}else if(iCode.startsWith("F")){
+				buttonPressed = false;
+				createButtonEvent();
+			}
+		
+		
+		}
+
+	}
+	
+	private String execCode(String code, boolean answer){
+		String returnCode = "";
+		
+		try{
+			 returnCode = client.sendGainer(code,answer);
+			 if(DEBUG){
+				 System.out.println("exec Code " + code);
+			 }
+		}catch(TimeoutException e){
+			System.out.println("exec Code " + code + " TIMEOUT!");
+		}catch(IOException e){
+			errorMessage("I/O error!!");
+		}
+
+		return returnCode;
+	}
+	
+	private boolean initialize(int mode, boolean verb){
+
+		parent.registerDispose(this);
+		try {
+			gainerButtonEventMethod = 
+				parent.getClass().getMethod("gainerButtonUpdated",new Class[] { Boolean.TYPE });
+		} catch (Exception e) {
+
+		}
+		
+		try {
+			gainerDigitalInputMethod = 
+				parent.getClass().getMethod("gainerDigitalInputUpdated",new Class[] { boolean[].class });
+		} catch (Exception e) {
+
+		}		
+
+		try {
+			gainerAnalogInputMethod = 
+				parent.getClass().getMethod("gainerAnalogInputUpdated",new Class[] { int[].class });
+		} catch (Exception e) {
+
+		}	
+		
+		serialtokenizer.printDebugString = DEBUG;
+		
+		reboot();
+		
+		if(getDeviceVersion().startsWith(libraryVersion,1)){
+			System.out.println("version check. OK");
+			setVerbose(verb);
+			if(!configuration(mode)){
+				errorMessage("configuration error!!");
+			}
+			try{
+				Thread.sleep(100);
+			}catch(InterruptedException e){}
+			
+			System.out.println("get ready!");
+			///正しく開いた
+
+			return true;
+		}else{
+			errorMessage("not match device and library");
+		}
+		
+
+		return false;
+	}
+	
+	private String getDeviceVersion(){
+		return execCode("?*",true);
+	}
+	
+	private void reboot(){
+		try{
+			Thread.sleep(100);
+		}catch(InterruptedException e){}
+		
+		//long t;
+		//t = System.currentTimeMillis();
+		//System.out.println("method reboot BEGIN " + t);
+		
+
+		execCode("Q*",true);
+
+		
+		//t = System.currentTimeMillis();
+		//System.out.println("method reboot END " + t);
+		
+		try{
+			Thread.sleep(100);
+		}catch(InterruptedException e){}
+	}
+	
 	private void setVerbose(boolean verb){
-		String c;
+		currentVerbose = verb;
+		String code="";
 		if(verb){
-			c = "V1*";
+			code = "V1*";
 			System.out.println("verbose mode");
 		}else{
-			c = "V0*";
+			code = "V0*";
 			System.out.println("silent mode");
 		}
-		this.write(c);
-
-		try{
-		Thread.sleep(100);
-		}catch(Exception e){
-			System.out.println(e);
-		}
+		execCode(code,true);
 	}
 	
-	public boolean getVerbose(){
-		return verbose;
-	}
-	
-	private void configuration(int mode){
-		System.out.println("configuration: mode"+mode);
-//     ain :din :aout:dout
-//     ----:----:----:----
-// C0:    0:   0:   0:   0
-// C1:    4:   4:   4:   4
-// C2:    8:   0:   4:   4
-// C3:    4:   4:   8:   0
-// C4:    8:   0:   8:   0	←追加
-// C5:    0:  16:   0:   0	←以降一個ずつ後ろに
-// C6:    0:   0:   0:  16
-// C7: LED matrix control???	←予定は未定（ぼちぼちと）
-// C8: CapSense???		←予定は未定（ぼちぼちと）
-// C9: servo control???		←予定は未定（ぼちぼちと）
+	private boolean configuration(int mode){
+		System.out.println("configuration: MODE" + mode);
 		
 		analogInput = null;
 		digitalInput = null;
@@ -274,714 +292,513 @@ public class Gainer implements SerialPortEventListener {
 		case MODE1:
 			analogInput = new int[4];
 			digitalInput = new boolean[4];
-			digital.configuration(4,4);
-			analog.configuration(4,4);
 			
-			this.write("KONFIGURATION_1*");
-			if(!waitForString("KONFIGURATION_1")){
-				throw new RuntimeException("Gainer error!! please check coneecting to gainer");
+			analogOutput = new int[4];
+			digitalOutput = new boolean[4];
+			
+			if(execCode("KONFIGURATION_1*",true).startsWith("KONFIGURATION_1")){
+				break;
+			}else{
+				errorMessage("configuration error");
 			}
-			
-			break;
+			return false;
 		case MODE2:
 			analogInput = new int[8];
 			digitalInput = new boolean[0];
-			digital.configuration(0,4);
-			analog.configuration(8,4);
 			
-			this.write("KONFIGURATION_2*");
-			if(!waitForString("KONFIGURATION_2")){
-				throw new RuntimeException("Gainer error!! please check coneecting to gainer");
+			analogOutput = new int[4];
+			digitalOutput = new boolean[4];
+			
+			if(execCode("KONFIGURATION_2*",true).startsWith("KONFIGURATION_2")){
+				break;
+			}else{
+				errorMessage("configuration error");
 			}
-			break;
+			return false;
 		case MODE3:
 			analogInput = new int[4];
 			digitalInput = new boolean[4];
-			digital.configuration(4,0);
-			analog.configuration(4,8);
 			
-			this.write("KONFIGURATION_3*");
-			if(!waitForString("KONFIGURATION_3")){
-				throw new RuntimeException("Gainer error!! please check coneecting to gainer");
+			analogOutput = new int[8];
+			digitalOutput = new boolean[0];
+			
+			if(execCode("KONFIGURATION_3*",true).startsWith("KONFIGURATION_3")){
+				break;
+			}else{
+				errorMessage("configuration error");
 			}
-			break;
+			return false;
 		case MODE4:
 			analogInput = new int[8];
 			digitalInput = new boolean[0];
-			digital.configuration(0,0);
-			analog.configuration(8,8);
 			
-			this.write("KONFIGURATION_4*");
-			if(!waitForString("KONFIGURATION_4")){
-				throw new RuntimeException("Gainer error!! please check coneecting to gainer");
+			analogOutput = new int[8];
+			digitalOutput = new boolean[0];
+			
+			if(execCode("KONFIGURATION_4*",true).startsWith("KONFIGURATION_4")){
+				break;
+			}else{
+				errorMessage("configuration error");
 			}
-			break;
+			return false;
 		case MODE5:
 			analogInput = new int[0];
 			digitalInput = new boolean[16];
-			digital.configuration(16,0);
-			analog.configuration(0,0);
 			
-			this.write("KONFIGURATION_5*");
-			if(!waitForString("KONFIGURATION_5")){
-				throw new RuntimeException("Gainer error!! please check coneecting to gainer");
+			analogOutput = new int[0];
+			digitalOutput = new boolean[0];
+			
+			if(execCode("KONFIGURATION_5*",true).startsWith("KONFIGURATION_5")){
+				break;
+			}else{
+				errorMessage("configuration error");
 			}
-			break;
+			return false;
 		case MODE6:
 			analogInput = new int[0];
 			digitalInput = new boolean[0];
-			digital.configuration(0,16);
-			analog.configuration(0,0);
 			
-			this.write("KONFIGURATION_6*");
-			if(!waitForString("KONFIGURATION_6")){
-				throw new RuntimeException("Gainer error!! please check coneecting to gainer");
-			}		
-			break;
-
+			analogOutput = new int[0];
+			digitalOutput = new boolean[16];
+			
+			if(execCode("KONFIGURATION_6*",true).startsWith("KONFIGURATION_6")){
+				break;
+			}else{
+				errorMessage("configuration error");
+			}
+			return false;
 		case MODE7:
 			analogInput = new int[0];
-			digitalInput = new boolean[0];
-			digital.configuration(0,0);
-			analog.configuration(0,0);
+			digitalInput = new boolean[8];
 			
-			this.write("KONFIGURATION_7*");
-			if(!waitForString("KONFIGURATION_7")){
-				throw new RuntimeException("Gainer error!! please check coneecting to gainer");
-			}	
-			break;
+			analogOutput = new int[0];
+			digitalOutput = new boolean[8];
 			
-		}
-			try{
-			Thread.sleep(1000);
-			}catch(Exception e){
-				System.out.println(e);
-			}
-
-	}
-
-
-  /**
-   * Used by PApplet to shut things down.
-   */
-  public void dispose() {
-  	System.out.println("dispose Gainer ..");
-  	this.write("E*");
-  
-    try {
-      // do io streams need to be closed first?
-      if (input != null) input.close();
-      if (output != null) output.close();
-
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    input = null;
-    output = null;
-
-    try {
-      if (port != null) port.close();  // close the port
-
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    port = null;
-  }
-
-
-  synchronized public void serialEvent(SerialPortEvent serialEvent) {
-    if (serialEvent.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
-      try {
-        while (input.available() > 0) {
-          synchronized (buffer) {
-            if (bufferLast == buffer.length) {
-              byte temp[] = new byte[bufferLast << 1];
-              System.arraycopy(buffer, 0, temp, 0, bufferLast);
-              buffer = temp;
-            }
-            buffer[bufferLast++] = (byte) input.read();
-            
-            
-            if(buffer[bufferLast-1]=='*'){
-            	sReturn = readStringUntil('*');
-            	clear();
-            }else{
-            	continue;
-            }
-            
-            if(DEBUG){
-            	System.out.println("gainer-> " + sReturn);
-            }
-            
-            checkReturnCode(sReturn);
-            
-          }
-        }
-
-      } catch (IOException e) {
-        errorMessage("serialEvent", e);
-      }
-    }
-  }
-
-
-  /**
-   */
-  private void buffer(int count) {
-    bufferSize = count;
-  }
-
-
-
-
-  /**
-   */
-  private int available() {
-    return (bufferLast - bufferIndex);
-  }
-
-
-  /**
-   */
-  private void clear() {
-    bufferLast = 0;
-    bufferIndex = 0;
-  }
-
-
-
-
-
-
-  /**
-   * Return a byte array of anything that's in the serial buffer.
-   * Not particularly memory/speed efficient, because it creates
-   * a byte array on each read, but it's easier to use than
-   * readBytes(byte b[]) (see below).
-   */
-  private byte[] readBytes() {
-    if (bufferIndex == bufferLast) return null;
-
-    synchronized (buffer) {
-      int length = bufferLast - bufferIndex;
-      byte outgoing[] = new byte[length];
-      System.arraycopy(buffer, bufferIndex, outgoing, 0, length);
-
-      bufferIndex = 0;  // rewind
-      bufferLast = 0;
-      return outgoing;
-    }
-  }
-
-
-  /**
-   * Grab whatever is in the serial buffer, and stuff it into a
-   * byte buffer passed in by the user. This is more memory/time
-   * efficient than readBytes() returning a byte[] array.
-   *
-   * Returns an int for how many bytes were read. If more bytes
-   * are available than can fit into the byte array, only those
-   * that will fit are read.
-   */
-  private int readBytes(byte outgoing[]) {
-    if (bufferIndex == bufferLast) return 0;
-
-    synchronized (buffer) {
-      int length = bufferLast - bufferIndex;
-      if (length > outgoing.length) length = outgoing.length;
-      System.arraycopy(buffer, bufferIndex, outgoing, 0, length);
-
-      bufferIndex += length;
-      if (bufferIndex == bufferLast) {
-        bufferIndex = 0;  // rewind
-        bufferLast = 0;
-      }
-      return length;
-    }
-  }
-
-
-  /**
-   * Reads from the serial port into a buffer of bytes up to and
-   * including a particular character. If the character isn't in
-   * the serial buffer, then 'null' is returned.
-   */
-  private byte[] readBytesUntil(int interesting) {
-    if (bufferIndex == bufferLast) return null;
-    byte what = (byte)interesting;
-
-    synchronized (buffer) {
-      int found = -1;
-      for (int k = bufferIndex; k < bufferLast; k++) {
-        if (buffer[k] == what) {
-          found = k;
-          break;
-        }
-      }
-      if (found == -1) return null;
-
-      int length = found - bufferIndex + 1;
-      byte outgoing[] = new byte[length];
-      System.arraycopy(buffer, bufferIndex, outgoing, 0, length);
-
-      bufferIndex = 0;  // rewind
-      bufferLast = 0;
-      return outgoing;
-    }
-  }
-
-
-  /**
-   * Reads from the serial port into a buffer of bytes until a
-   * particular character. If the character isn't in the serial
-   * buffer, then 'null' is returned.
-   *
-   * If outgoing[] is not big enough, then -1 is returned,
-   *   and an error message is printed on the console.
-   * If nothing is in the buffer, zero is returned.
-   * If 'interesting' byte is not in the buffer, then 0 is returned.
-   */
-  private int readBytesUntil(int interesting, byte outgoing[]) {
-    if (bufferIndex == bufferLast) return 0;
-    byte what = (byte)interesting;
-
-    synchronized (buffer) {
-      int found = -1;
-      for (int k = bufferIndex; k < bufferLast; k++) {
-        if (buffer[k] == what) {
-          found = k;
-          break;
-        }
-      }
-      if (found == -1) return 0;
-
-      int length = found - bufferIndex + 1;
-      if (length > outgoing.length) {
-        System.err.println("readBytesUntil() byte buffer is" +
-                           " too small for the " + length +
-                           " bytes up to and including char " + interesting);
-        return -1;
-      }
-      //byte outgoing[] = new byte[length];
-      System.arraycopy(buffer, bufferIndex, outgoing, 0, length);
-
-      bufferIndex += length;
-      if (bufferIndex == bufferLast) {
-        bufferIndex = 0;  // rewind
-        bufferLast = 0;
-      }
-      return length;
-    }
-  }
-
-
-  /**
-   * Return whatever has been read from the serial port so far
-   * as a String. It assumes that the incoming characters are ASCII.
-   *
-   * If you want to move Unicode data, you can first convert the
-   * String to a byte stream in the representation of your choice
-   * (i.e. UTF8 or two-byte Unicode data), and send it as a byte array.
-   */
-  private String readString() {
-    if (bufferIndex == bufferLast) return null;
-    return new String(readBytes());
-  }
-
-
-  /**
-   * Combination of readBytesUntil and readString. See caveats in
-   * each function. Returns null if it still hasn't found what
-   * you're looking for.
-   *
-   * If you want to move Unicode data, you can first convert the
-   * String to a byte stream in the representation of your choice
-   * (i.e. UTF8 or two-byte Unicode data), and send it as a byte array.
-   */
-  private String readStringUntil(int interesting) {
-    byte b[] = readBytesUntil(interesting);
-    if (b == null) return null;
-    return new String(b);
-  }
-
-
-
-
-  private void write(byte bytes[]) {
-	  sReturn="";
-    try {
-      output.write(bytes);
-      //output.flush();   // hmm, not sure if a good idea
-    } catch (IOException e) { // null pointer or serial port dead
-      System.out.println("- write error i/o exception - please check connecting to gainer");
-      errorMessage("write", e);
-      e.printStackTrace();
-      
-    }
-  }
-
-
-  /**
-   * Write a String to the output. Note that this doesn't account
-   * for Unicode (two bytes per char), nor will it send UTF8
-   * characters.. It assumes that you mean to send a byte buffer
-   * (most often the case for networking and serial i/o) and
-   * will only use the bottom 8 bits of each char in the string.
-   * (Meaning that internally it uses String.getBytes)
-   *
-   * If you want to move Unicode data, you can first convert the
-   * String to a byte stream in the representation of your choice
-   * (i.e. UTF8 or two-byte Unicode data), and send it as a byte array.
-   */
-  public void write(String what) {
-  	if(DEBUG){
-  		System.out.println(what + "-> gainer");
-  	}
-    write(what.getBytes());
-  }
-
-
-  /**
-   * If this just hangs and never completes on Windows,
-   * it may be because the DLL doesn't have its exec bit set.
-   * Why the hell that'd be the case, who knows.
-   */
-  static public String[] list() {
-    Vector list = new Vector();
-    try {
-      //System.err.println("trying");
-      Enumeration portList = CommPortIdentifier.getPortIdentifiers();
-      //System.err.println("got port list");
-      while (portList.hasMoreElements()) {
-        CommPortIdentifier portId =
-          (CommPortIdentifier) portList.nextElement();
-        if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
-          String name = portId.getName();
-          list.addElement(name);
-          
-        }
-      }
-
-    } catch (UnsatisfiedLinkError e) {
-      System.err.println("1");
-      errorMessage("ports", e);
-
-    } catch (Exception e) {
-      System.err.println("2");
-      errorMessage("ports", e);
-    }
-    //System.err.println("move out");
-    String outgoing[] = new String[list.size()];
-    list.copyInto(outgoing);
-    return outgoing;
-  }
-
-
-  /**
-   * General error reporting, all corraled here just in case
-   * I think of something slightly more intelligent to do.
-   */
-  static public void errorMessage(String where, Throwable e) {
-    e.printStackTrace();
-    throw new RuntimeException("Error inside Serial." + where + "()");
-  }
-
-	//戻り値のあるやつはそれぞれ判断する
-	private void checkReturnCode(String s){
-	
-            if(s.startsWith("i") || s.startsWith("I")){
-            
-            	String value;
-            	
-            	for(int i=0;i<analogInput.length;i++){
-            		value = s.substring(2*i+1,2*(i+1)+1);
-            		analogInput[i] = Integer.parseInt(value,16);
-            	}
-            	
-            }else if(s.startsWith("r") || s.startsWith("R")){
-            	int value = Integer.parseInt(s.substring(1,5),16);
-            	for(int i=0;i<digitalInput.length;i++){
-            		int c = 1&(value>>i);
-            		if(c==1){
-            			digitalInput[i] = true;
-            		}else{
-            			digitalInput[i] = false;
-            		}
-            	}
-            	
-            }else if(s.startsWith("N")){
-              buttonPressed = true;
-            }else if(sReturn.startsWith("F")){
-              buttonPressed = false;
-            }
-            //これら以外の戻りはおのおのの指定したwaitForで待つ
-/*
-            if(gainerAnalogInEventMethod != null){
-            	if(s.startsWith("i")){
-            		try{
-            			Object[] args = 
-            			gainerAnalogInEventMethod.invoke(parent,new Object[]{new Void()});
-            		}catch(Exception e){
-                  String msg = "error, disabling gainerAnalogInEvent() for " + port;
-                  System.err.println(msg);
-                  e.printStackTrace();
-                  gainerAnalogInEventMethod = null;
-                }
-            	}
-            }
-*/
-            if(gainerButtonEventMethod != null){
-              if(s.startsWith("F") || s.startsWith("N") ){
-                try{
-                  gainerButtonEventMethod.invoke(parent,new Object[]{new Boolean(buttonPressed)});
-                  //System.out.println("make ganerSWEvent "+ buttonPressed);
-                }catch(Exception e){
-                  String msg = "error, disabling gainerSWEvent() for " + port;
-                  System.err.println(msg);
-                  e.printStackTrace();
-                  gainerButtonEventMethod = null;
-                }
-              }
-            }
-	}
-
-	public boolean waitForString(String sRet){
-		int count = TIMEOUT;
-		//
-		while(!sReturn.startsWith(sRet) && count>0){
-			count--;
-			if(sReturn.startsWith("!*")){
-				//System.out.println("gainer wrong return code error!!" );
-				return false;
+			if(execCode("KONFIGURATION_7*",true).startsWith("KONFIGURATION_7")){
+				break;
 			}else{
-			//待ちの間に戻ってきた想定以外の値
-				if(sReturn != ""){
-					checkReturnCode(sReturn);
-					return true;
-				}
+				errorMessage("configuration error");
 			}
+			return false;
+		case MODE8:
+			analogInput = new int[0];
+			digitalInput = new boolean[0];
 			
-			try{
-			Thread.sleep(10);
-			}catch(Exception e){
-				System.out.println(e);
+			analogOutput = new int[8];
+			digitalOutput = new boolean[8];
+			
+			if(execCode("KONFIGURATION_8*",true).startsWith("KONFIGURATION_8")){
+				break;
+			}else{
+				errorMessage("configuration error");
 			}
-		}
-		
-		if(!sReturn.startsWith(sRet)){
-			System.out.print("wait for  " + sRet + " recv:" + sReturn);
-			System.out.println("   gainer TIMEOUT return code error!!" );
 			return false;
 		}
+		
 		return true;
 	}
 	
-  public void reboot(){
-  	this.write("Q*");
+	private void createButtonEvent(){
+		if(gainerButtonEventMethod != null){
 			try{
-			Thread.sleep(1000);
+				gainerButtonEventMethod.invoke(parent,new Object[]{new Boolean(buttonPressed)});
 			}catch(Exception e){
-				System.out.println(e);
-			}  	
-		if(sReturn.indexOf("Q*")==-1){
-			throw new RuntimeException("Reboot Error !!!");
-		}else{
-			System.out.println("Gainer reboot.. ");
+				e.printStackTrace();
+				gainerButtonEventMethod = null;
+				errorMessage("GainerButton error!!");
+			}
 		}
-		
-
-  }
-  
+	}
+	
+	
+	
+	
 	public void turnOnLED(){
-
-		this.write("h*");
-		if(getVerbose()){
-			waitForString("h");
-		}else{
-			try{
-				Thread.sleep(1);
-			}catch(Exception e){
-				System.out.println(e);
-			}  	
-		}
+		execCode("h*",currentVerbose);
 	}
 	
 	public void turnOffLED(){
-		
-		this.write("l*");
-		if(getVerbose()){
-			waitForString("l");
-		}else{
-			try{
-				Thread.sleep(1);
-			}catch(Exception e){
-				System.out.println(e);
-			}	
-		}
+		execCode("l*",currentVerbose);
 	}
 	
 	public void peekDigitalInput(){
-		digital.peek();
+		interpretCode(execCode("R*",false));
 	}
 	
 	public void beginDigitalInput(){
-		digital.begin();
+		execCode("r*",false);
 	}
+	
 	public void endDigitalInput(){
-		digital.end();
+		execCode("E*",true);
 	}
 	
 	//全チャンネルに一度に送信
-	public void digitalOutput(int chs){
-		digital.out(chs);
-
+	//0x0000 - 0xFFFF
+	public boolean digitalOutput(int channels){
+		if(channels <=0xFFFF && channels >=0){
+			String val = Integer.toHexString(channels).toUpperCase();
+			String sv="";
+			//必ず4桁
+			for(int i=0;i<4-val.length();i++){
+				sv += "0";
+			}
+			sv += val;
+			
+			String code = "D"+ sv +"*";
+			execCode(code,currentVerbose);
+		
+//		冗長かな？
+			for(int i=0;i<digitalOutput.length;i++){
+				int a = (channels>>i) & 1;
+				digitalOutput[i] = a==1 ? true:false;
+			}
+			
+			return true;
+		}
+		return false;
 	}
 	
-	public void digitalOutput(boolean[] values){
-		digital.out(values);
-		clear();
+	public boolean digitalOutput(boolean[] values){
+		int channels = 0;
+  	if(digitalOutput.length==values.length){
+	  	for(int i=0;i<values.length;i++){
+	  		if(values[i]){
+	  			channels |= (1<<i);
+	  		}
+//	  	冗長かな？
+	  		digitalOutput[i] = values[i] ? true:false;
+	  	}
+  	}else{
+  		return false;
+  	}
+		String val = Integer.toHexString(channels).toUpperCase();
+		String sv="";
+		for(int i=0;i<digitalOutput.length-val.length();i++){
+			sv += "0";
+		}
+		sv += val;
+			
+		String code = "D"+ sv +"*";
+		execCode(code,currentVerbose);
+		return true;
+
 	}
 	
 	//指定したチャンネルをHigh
-	public void setHigh(int ch){
-		digital.high(ch);
+	public boolean setHigh(int channel){
+		if(digitalOutput.length>channel){
+			String code = "H" + Integer.toHexString(channel).toUpperCase() + "*";
+			execCode(code,currentVerbose);
+//  	冗長かな？
+  		digitalOutput[channel] = true;
+  		
+			return true;
+		}		
+		return false;
 	}
 	
 	//配列のチャンネルをHigh それ以外はLow
-	public void setHigh(int[] chs){
-		digital.high(chs);
+	public boolean setHigh(int[] channels){
+  	byte vch = 0;
+  	for(int i=0;i<channels.length;i++){
+  		if(digitalOutput.length>channels[i]){
+  		  vch |= (1<<channels[i]);
+  		}else{
+	  		return false;
+  		}
+//  	冗長かな？
+  		digitalOutput[channels[i]] = true;
+  	}
+  	
+ 		String val = Integer.toHexString(vch).toUpperCase();
+		String sv="";
+		for(int i=0;i<digitalOutput.length-val.length();i++){
+			sv += "0";
+		}
+		sv += val;
+		 	
+		//String sv = val<16 ? "0": "";
+		//sv+= Integer.toHexString(val).toUpperCase();
+		String code = "D"+ sv +"*";
+		execCode(code,currentVerbose);
+		return true;
 	}
 	
 	//指定したチャンネルをLOW
-	public void setLow(int ch){
-		digital.low(ch);
+	public boolean setLow(int channel){
+		if(digitalOutput.length>channel){
+			String code = "L" + Integer.toHexString(channel).toUpperCase() + "*";
+			execCode(code,currentVerbose);
+			
+//  	冗長かな？
+			digitalOutput[channel] = false;
+			return true;
+		}
+		return false;
 	}
 	
 	//配列のチャンネルをlow それ以外はHigh
-	public void setLow(int[] chs){
-		digital.low(chs);
+	public boolean setLow(int[] channels){
+  	byte vch = 0;
+  	for(int i=0;i<channels.length;i++){
+  		if(digitalOutput.length>channels[i]){
+  		  vch |= (1<<channels[i]);
+  		}else{
+	  		return false;
+  		}
+//  	冗長かな？
+  		digitalOutput[channels[i]] = false; 		
+  	}
+  	
+ 		String val = Integer.toHexString(vch).toUpperCase();
+		String sv="";
+		for(int i=0;i<digitalOutput.length-val.length();i++){
+			sv += "0";
+		}
+		sv += val;
+		 	
+		//String sv = val<16 ? "0": "";
+		//sv+= Integer.toHexString(val).toUpperCase();
+		String code = "D"+ sv +"*";
+		execCode(code,currentVerbose);
+		return true;
 	}
 	
 	public void beginAnalogInput(){
-		analog.begin();
-		analogSeq = true;
+		execCode("i*",false);
 	}
 	
 	public void endAnalogInput(){
-		analogSeq = false;
-		analog.end();
+		execCode("E*",true);
 	}
 	
 	public void peekAnalogInput(){
-		analog.peek();
+		interpretCode(execCode("I*",false));
 	}
 	
-	public void analogOutput(int ch,int value){
-		analog.out(ch,value);
+	//指定チャンネルに値を出力
+	//値は0-255に丸める
+	public boolean analogOutput(int ch,int value){
+		if(ch>=analogInput.length ){
+			return false;
+		}
+		String code = "a" + Integer.toHexString(ch).toUpperCase();
+		value = value<  0 ?   0: value;
+		value = value>255 ? 255: value;
+//	冗長かな？
+		analogOutput[ch] = value;
+		
+		
+		String sv = value<16 ? "0": "";
+		sv+= Integer.toHexString(value).toUpperCase();
+		code+=sv;
+		code+="*";
+		
+		execCode(code,currentVerbose);
+
+		return true;
+
 	}
 	
-	
-	public void analogOutput(int[] values){
-		analog.out(values);
+	//配列を対応するチャンネルにそれぞれ出力
+	public boolean analogOutput(int[] values){
+  	String code = "A";
+  	String sv="";
+		if(analogOutput.length==values.length){
+			for(int i=0;i<values.length;i++){
+				values[i] = values[i]<  0 ?   0: values[i];
+				values[i] = values[i]>255 ? 255: values[i];
+				analogOutput[i] = values[i];
+				
+				sv = values[i]<16 ? "0": "";
+				sv+= Integer.toHexString(values[i]).toUpperCase();
+				code+=sv;
+			}
+		  code+= "*";
+		}else{
+  		return false;
+		}
+		
+		execCode(code,currentVerbose);
+		
+		return true;
 	}
-	
 	
 	public void analogSamplingAllChannels(){
-	
-		this.write("M0*");
-		waitForString("M0*");
+		execCode("M0*",true);
 	}
+	
 	public void analogSamplingSingleChannel(){
-		this.write("M1*");
-		waitForString("M1*");
+		execCode("M1*",true);
+	}
+	
+	public boolean ampGainAGND(int gain){
+		String code = "G";
+		if(gain>=0 && gain<16){
+			code += Integer.toHexString(gain).toUpperCase();
+			code += "1*";
+			execCode(code,true);
+			return true;
+		}
+		return false;
+	}
+	
+	public boolean ampGainDGND(int gain){
+		String code = "G";
+		if(gain>=0 && gain<16){
+			code += Integer.toHexString(gain).toUpperCase();
+			code += "0*";
+			execCode(code,true);
+			
+			return true;
+		}
+		return false;	
+	}
+	
+	
+	
+	
+	
+	//
+	//
+	//
+	//
+	public class SerialTokenizer
+		implements SerialPortEventListener{
+		
+		private Gainer gainer;
+		
+		private SerialPort port;
+		private InputStream input;
+
+		
+		private StringBuffer sReturnCodes;
+
+
+		public boolean printDebugString = false;
+		
+		public SerialTokenizer(Gainer gainer,SerialPort port){
+			sReturnCodes = new StringBuffer();
+			this.port = port;
+			
+			this.gainer = gainer;
+			
+			try{
+				input = this.port.getInputStream();
+		
+				this.port.addEventListener(this);
+			}catch(IOException e){
+				
+			}catch(TooManyListenersException e){
+				//Listeneつけすぎ　致命的
+				System.out.println("TooManyListeners");
+			}
+			
+	    this.port.notifyOnDataAvailable(true);
+
+		}
+
+		public synchronized void serialEvent(SerialPortEvent serialEvent){
+			if(serialEvent.getEventType()==SerialPortEvent.DATA_AVAILABLE){
+				try{
+					while(input.available() > 0){
+						putReturnCode();
+					}
+					
+				}catch(IOException e){
+					//よみこみエラー
+					
+					System.out.println("serialEvent read error ");
+				}
+				
+			}
+		}
+		
+		public synchronized void clean(){
+			port.removeEventListener();
+			try{
+				input.close();
+			}catch(IOException e){}
+			
+			input = null;
+		}
+		
+
+		
+		public synchronized String getReturnCode(){
+//			System.out.println("getReturnCode BEGIN  " + Thread.currentThread().getName());
+			
+//			long start = System.currentTimeMillis();
+//			while(sReturnCodes.indexOf("*") == -1){
+//				//System.out.println("wait " + timeout + "  " + Thread.currentThread().getName() );
+//				if(timeout==0){
+//					wait(0);
+//					return "";
+//				}else{
+//					long now = System.currentTimeMillis();
+//					long rest = timeout - (now-start);
+//					if(rest <= 0){
+//						System.out.println("timeout return__buffer[" + sReturnCodes + "] " + sReturnCodes.indexOf("*")  + Thread.currentThread().getName() );
+//						throw new TimeoutException("TimeoutException!! " + (now - start));
+//					}
+//					wait(rest);
+//				}
+//			}
+//			
+			
+			String returnCode = sReturnCodes.substring(0, sReturnCodes.lastIndexOf("*")+1);
+			sReturnCodes.delete(0, sReturnCodes.lastIndexOf("*")+1);
+			
+//			while(sReturnCodes.indexOf("*")!=-1){
+//				returnCode = sReturnCodes.substring(0, sReturnCodes.indexOf("*")+1);
+//				sReturnCodes.delete(0, sReturnCodes.indexOf("*")+1);
+//			}
+			
+//			System.out.println("getReturnCode END");
+			return returnCode;
+		}
+		
+		public synchronized void putReturnCode(){
+//			System.out.println("putReturnCode BEGIN  " + Thread.currentThread().getName());	
+			try{
+				byte temp[] = new byte[64];
+				int read = input.read(temp);
+
+				sReturnCodes.append(new String(temp,0,read));
+
+				}catch(IOException e){
+//			よみこみエラー
+			}
+			int indexStar = sReturnCodes.indexOf("*");
+			if(indexStar != -1){
+				//notifyAll();
+				
+				if(printDebugString){
+					System.out.println("printDebugString returnbuffer [" + sReturnCodes+ "] " + Thread.currentThread().getName());
+				}
+				
+				gainer.interpretCode(getReturnCode());
+			}
+			
+//			System.out.println("putReturnCode END");
+		}
+		
+		public synchronized void clearReturnCode(){
+			int indexStar = sReturnCodes.indexOf("*");
+		
+			while(indexStar != -1){
+				System.out.println("clearReturnCode : " + sReturnCodes);
+				sReturnCodes.delete(0, indexStar+1);
+				indexStar = sReturnCodes.indexOf("*");
+			}
+			
+		}
+
 		
 	}
-	
-	//mode7のみ
-	//line毎に処理
-	public void scanLine(int line,int[] values){
-		if(currentMode==MODE7){
-			String s = "a";
-			String sv = "";
-			if(values.length == 8){
-				if(line<8){
-					s += Integer.toHexString(line).toUpperCase();
-				}else{
-					throw new RuntimeException("Gainer error!! out of bounds");
-				}
-				for(int i=0;i<8;i++){
-					sv = values[i]<16 ? "0": "";
-					s += sv;
-					s += Integer.toHexString(values[i]).toUpperCase();
-				}
-				s += "*";
-				write(s);
-	 			waitForString("a");
-			}else{
-				throw new RuntimeException("Gainer error!! number of values");
-			}
-		}else{
-			throw new RuntimeException("Gainer error!! this method can use only MODE7");
-		}
-	}
-	//mode7のみ
-	//LEDmatrix全体を処理
-	public void scanMatrix(int[] values){
-		if(currentMode==MODE7){
-			if(values.length == 64){
-				for(int col=0;col<8;col++){
-					int[] v = new int[8];
-					for(int i=0;i<8;i++){
-						v[i] = values[col*8+i];
-					}
-					scanLine(col,v);
-				}
-			}
-		}else{
-			throw new RuntimeException("Gainer error!! this method can use only MODE7");
-		}
-	}
-	
-	
-	
-	
-	public void ampGainAGND(int gain){
-	 String s ="G";
-	 
-	 if(gain>=0 && gain<16){
-	  s += Integer.toHexString(gain).toUpperCase();
-  	s+="1";
-	  
-	 }else{
-	 	throw new RuntimeException("Gainer error!! gain");
-	 }
-	 s +="*";
-	 write(s);
-	 waitForString("G");
-	
-	}
-	
-	
 
 
-	public void ampGainDGND(int gain){
-	 String s ="G";
-	 
-	  if(gain>=0 && gain<16){
-	   s += Integer.toHexString(gain).toUpperCase();
-	   s+="0";
-	  }else{
-	  	throw new RuntimeException("Gainer error!! gain");
-	  }
-	  s +="*";
-	  write(s);
-	  waitForString("G");
 	
-	}	
 	
-	static public void DEBUG(){
-		DEBUG = true;
-	}
 }
-
-
