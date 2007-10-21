@@ -18,6 +18,8 @@
 	<string>????</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleIconFile</key>
+	<string>sketch.icns</string>
 	<key>CFBundleIdentifier</key> 
 	<string>SerialProxy</string>
 	<key>Java</key>
