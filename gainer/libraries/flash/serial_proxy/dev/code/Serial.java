@@ -11,7 +11,7 @@ import java.util.*;
 
 public class Serial implements SerialPortEventListener {
 
-	static private final String version = "?1.0.";
+	static private final String version = "?1.";
 	
 	private SerialProxy parent;
 
