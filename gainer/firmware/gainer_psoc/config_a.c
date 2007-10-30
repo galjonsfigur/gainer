@@ -55,6 +55,7 @@ BYTE command_set_led_h(void);
 BYTE command_set_led_l(void);
 BYTE command_set_gain(char *pCommand);
 BYTE command_set_mode(char *pCommand);
+BYTE command_set_aout_mode(char *pCommand);
 
 BYTE command_reboot_a(void);
 
@@ -222,7 +223,8 @@ void Enter_Config_A(void)
 	DUALADC_A_Start(DUALADC_A_HIGHPOWER);	// try lower power later
 
 	// start analog outputs
-	Counter16_A_PWMClk_WritePeriod(7);	// 1000Hz (i.e. 1ms)
+	Counter16_A_PWMClk_WritePeriod(157);	// 50Hz (i.e. 20ms)
+//	Counter16_A_PWMClk_WritePeriod(7);	// 1000Hz (i.e. 1ms)
 	Counter16_A_PWMClk_WriteCompareValue(0);
 	Counter16_A_PWMClk_Start();
 
@@ -502,6 +504,10 @@ void handle_commands_config_a(void)
 				
 				case 'n':	// notify when changed (experimental)
 					bNumBytes = command_get_din_notify(_gainer.cLocalRxBuffer);
+					break;
+
+				case 'P':	// set analog output mode (Px)
+					bNumBytes = command_set_aout_mode(_gainer.cLocalRxBuffer);
 					break;
 
 				default:
@@ -1074,7 +1080,6 @@ void prepare_ain_values(void)
 	}
 }
 
-
 BYTE command_get_din_notify(char *pCommand)
 {
 	if (1 != _gainer.bCommandLength) {
@@ -1094,7 +1099,6 @@ BYTE command_get_din_notify(char *pCommand)
 	return 0;
 }
 
-
 BYTE get_din_values(void)
 {
 	BYTE value = 0x00;
@@ -1107,4 +1111,30 @@ BYTE get_din_values(void)
 	}
 
 	return value;
+}
+
+BYTE command_set_aout_mode(char *pCommand)
+{
+	if (2 != _gainer.bCommandLength) {
+		PutErrorStringToReplyBuffer();
+		return 2;
+	}
+
+	if ('0' == (*(pCommand + 1))) {
+		Counter16_A_PWMClk_Stop();
+		Counter16_A_PWMClk_WritePeriod(7);	// 1000Hz (i.e. 1ms)
+		Counter16_A_PWMClk_WriteCompareValue(0);
+		Counter16_A_PWMClk_Start();
+	} else if ('1' == (*(pCommand + 1))) {
+		Counter16_A_PWMClk_Stop();
+		Counter16_A_PWMClk_WritePeriod(157);	// 50Hz (i.e. 20ms)
+		Counter16_A_PWMClk_WriteCompareValue(0);
+		Counter16_A_PWMClk_Start();
+	}
+
+	_gainer.cReplyBuffer[0] = 'P';
+	_gainer.cReplyBuffer[1] = *(pCommand + 1);
+	_gainer.cReplyBuffer[2] = '*';
+
+	return 3;
 }
