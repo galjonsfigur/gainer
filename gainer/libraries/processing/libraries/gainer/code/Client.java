@@ -17,17 +17,12 @@ public class Client{
 	public SerialPort port;
 	private OutputStream output;
 
-//	private SerialTokenizer serialtokenizer;
-
-
 	public Client(){
-
 	}
 	
 	
 	public void cleanSerialPort(){
-//		serialtokenizer.clean();
-		
+	
 		closeSerialPort();
 		try{
 			output.close();
@@ -79,22 +74,19 @@ public class Client{
 		}catch(IOException e){
 			e.printStackTrace();
 		}
-//		try{
-//			return serialtokenizer.getReturnCode(timeout);
-//		}catch(InterruptedException e){	}
-		
+
 		return "";
 	}
 	
 	//名前を指定してGainerを開く
 	public boolean openGainer(String pname){
 		if(openSerialPort(pname)){
-//			serialtokenizer = new SerialTokenizer(port);
-			
+
 			String returnCode="";
 			while(!returnCode.equals("Q*")){
 				try{
 				returnCode = sendGainer("Q*",true);
+				
 				
 				}catch(TimeoutException e){
 				}catch(IOException e){
@@ -122,8 +114,7 @@ public class Client{
 				//mac pname.startsWith("/dev/cu.usbserial-")
 				//win pname.startsWith("COM")
 				if(openSerialPort(pname)){
-//					serialtokenizer = new SerialTokenizer(port);
-					
+
 					try{
 						//ここで戻り値の確認をする[?*]
 						sendGainer("Q*",true);//必ずQは送る
@@ -202,10 +193,5 @@ public class Client{
 		System.out.println("closing " + port.getName());
 	}
 	
-	//DEBUGの文字列を出力するかどうか
-	public void printDebugString(boolean debug){
-//		if(serialtokenizer!=null) serialtokenizer.printDebugString = debug;
-	}
-
 
 }

@@ -25,8 +25,8 @@ public final class Gainer {
 	
 	//外部から参照します
 	
-	//ファームのバージョン[1.0.1.*]にマッチする
-	public static final String libraryVersion = "1.0.1";
+	//ファームのバージョン[1.*]にマッチする
+	public static final String libraryVersion = "1.";
 	
 	public boolean buttonPressed = false;
 	public int[] analogInput;
