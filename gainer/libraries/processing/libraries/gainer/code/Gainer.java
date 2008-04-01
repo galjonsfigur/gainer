@@ -58,9 +58,11 @@ public final class Gainer {
 		
 		client = new Client();
 		if(client.findGainer()){
-			serialtokenizer = new SerialTokenizer(this,client.port);
-			initialize(mode,verb);
+			System.out.println("ok.. found Gainer ");
 			
+			initialize(mode,verb);
+			serialtokenizer = new SerialTokenizer(this,client.port);
+			serialtokenizer.printDebugString = DEBUG;
 
 		}else{
 			errorMessage("Gainer not found !!");
@@ -84,8 +86,10 @@ public final class Gainer {
 		
 		client = new Client();
 		if(client.openGainer(pname)){
-			serialtokenizer = new SerialTokenizer(this,client.port);
+			
 			initialize(mode,verb);
+			serialtokenizer = new SerialTokenizer(this,client.port);
+			serialtokenizer.printDebugString = DEBUG;
 			
 		}else{
 			errorMessage("Gainer not found !!");
@@ -107,6 +111,8 @@ public final class Gainer {
 	}
 	
 	public void dispose(){
+		System.out.println("clean");
+		serialtokenizer.clean();
 		reboot();
 		client.cleanSerialPort();
 	}
@@ -187,7 +193,7 @@ public final class Gainer {
 				 System.out.println("exec Code " + code);
 			 }
 		}catch(TimeoutException e){
-			System.out.println("exec Code " + code + " TIMEOUT!");
+			System.out.println("exec Code  " + code + "  TIMEOUT!");
 		}catch(IOException e){
 			errorMessage("I/O error!!");
 		}
@@ -200,7 +206,7 @@ public final class Gainer {
 		parent.registerDispose(this);
 		try {
 			gainerButtonEventMethod = 
-				parent.getClass().getMethod("gainerButtonUpdated",new Class[] { Boolean.TYPE });
+				parent.getClass().getMethod("gainerButtonEvent",new Class[] { Boolean.TYPE });
 		} catch (Exception e) {
 
 		}
@@ -219,16 +225,23 @@ public final class Gainer {
 
 		}	
 		
-		serialtokenizer.printDebugString = DEBUG;
 		
-		reboot();
+		
+		
+		try{
+			Thread.sleep(100);
+		}catch(InterruptedException e){}
+		
+		//reboot();
 		
 		if(getDeviceVersion().startsWith(libraryVersion,1)){
 			System.out.println("version check. OK");
+			
 			setVerbose(verb);
 			if(!configuration(mode)){
 				errorMessage("configuration error!!");
 			}
+			
 			try{
 				Thread.sleep(100);
 			}catch(InterruptedException e){}
@@ -237,8 +250,6 @@ public final class Gainer {
 			///ê≥ÇµÇ≠äJÇ¢ÇΩ
 
 			return true;
-		}else{
-			errorMessage("not match device and library");
 		}
 		
 
@@ -254,16 +265,16 @@ public final class Gainer {
 			Thread.sleep(100);
 		}catch(InterruptedException e){}
 		
-		//long t;
-		//t = System.currentTimeMillis();
-		//System.out.println("method reboot BEGIN " + t);
+//		long t;
+//		t = System.currentTimeMillis();
+//		System.out.println("method reboot BEGIN " + t);
 		
 
-		execCode("Q*",true);
+		execCode("Q*",false);
 
 		
-		//t = System.currentTimeMillis();
-		//System.out.println("method reboot END " + t);
+//		t = System.currentTimeMillis();
+//		System.out.println("method reboot END " + t);
 		
 		try{
 			Thread.sleep(100);
@@ -281,6 +292,9 @@ public final class Gainer {
 			System.out.println("silent mode");
 		}
 		execCode(code,true);
+		try{
+			Thread.sleep(100);
+		}catch(InterruptedException e){}
 	}
 	
 	private boolean configuration(int mode){
@@ -683,7 +697,7 @@ public final class Gainer {
 			this.port = port;
 			
 			this.gainer = gainer;
-			
+
 			try{
 				input = this.port.getInputStream();
 		
@@ -717,11 +731,11 @@ public final class Gainer {
 		
 		public synchronized void clean(){
 			port.removeEventListener();
-			try{
-				input.close();
-			}catch(IOException e){}
-			
-			input = null;
+//			try{
+//				input.close();
+//			}catch(IOException e){}
+//			
+//			input = null;
 		}
 		
 

@@ -31,7 +31,7 @@ public class Client{
 	}
 	
 	
-	//Gainerに命令を送る、戻りを待つかどうか
+	//Gainerに命令を送る、戻りを待つかどうか 1000ms もどりをまつ
 	public String sendGainer(String code, boolean answer) throws TimeoutException,IOException{
 		String returnCode = "";
 		
@@ -42,7 +42,8 @@ public class Client{
 		
 		
 		write(code);
-		returnCode = readGainer(200);
+		returnCode = readGainer(1000);
+		
 		
 		return returnCode;
 	}
@@ -54,16 +55,23 @@ public class Client{
 			long start = System.currentTimeMillis();
 			int n = input.available();
 			StringBuffer returnBuffer= new StringBuffer();
-			while(n==0 && returnBuffer.indexOf("*")==-1){
+
+			while(returnBuffer.indexOf("*")==-1){
 
 					long now = System.currentTimeMillis();
 					long rest = timeout - (now-start);
+
 					if(rest <= 0){
 						System.out.println("timeout return_  " +  Thread.currentThread().getName() );
 						throw new TimeoutException("TimeoutException!! " + (now - start));
 					}
 
+					try{
+						Thread.sleep(10);
+					}catch(InterruptedException e){}
+					
 				n = input.available();
+
 				byte buf[] = new byte[n];
 				input.read(buf);
 				returnBuffer.append(new String(buf));
@@ -108,23 +116,28 @@ public class Client{
 		System.out.println("finding Gainer...");
 		while(portList.hasMoreElements()){
 			CommPortIdentifier portId = (CommPortIdentifier) portList.nextElement();
+			String pname = portId.getName();
 			if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
-				System.out.println("found port .. " + portId.getName());
-				String pname = portId.getName();
+				if(pname.startsWith("/dev/cu")){
+					continue;
+				}
+				System.out.println("found port .. " + pname);
+				
 				//mac pname.startsWith("/dev/cu.usbserial-")
 				//win pname.startsWith("COM")
 				if(openSerialPort(pname)){
 
+					
 					try{
 						//ここで戻り値の確認をする[?*]
 						sendGainer("Q*",true);//必ずQは送る
-						Thread.sleep(100);
+						Thread.sleep(1000);
 						String version = sendGainer("?*",true);
 						System.out.println("gainer firm version " + version);
 						if(version.startsWith(Gainer.libraryVersion, 1) ){
 							return true;
 						}
-						sendGainer("Q*",true);
+						//sendGainer("Q*",true);
 						cleanSerialPort();
 						
 						
@@ -161,7 +174,7 @@ public class Client{
 		try{
 			CommPortIdentifier portId = CommPortIdentifier.getPortIdentifier(portName);
 			
-			port = (SerialPort)portId.open("GainerSerialPort", 2000);
+			port = (SerialPort)portId.open("GainerSerialPort", 1000);
 	    port.setSerialPortParams(rate, databits, stopbits, parity);
 
 	    output = port.getOutputStream();
