@@ -26,7 +26,7 @@ package gainer
 		
 		public var eventDispatcher:EventDispatcher;
 		
-		public function onFinished():void {}
+		public var onFinished:Function;
 		
 		public function onTimeout(command:Object):void {}
 		
@@ -39,6 +39,9 @@ package gainer
 			eventDispatcher = new EventDispatcher();
 			commands = new Array();
 			hasJob = false;
+			
+			//dummy
+			onFinished = function():void {};
 		}
 		
 		public function enqueue(cmd:Object):void {

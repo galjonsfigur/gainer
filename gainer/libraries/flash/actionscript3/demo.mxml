@@ -24,5 +24,6 @@
 	<mx:RadioButton x="10" y="172" label="Digital input" groupName="inputType" selected="false" value="digital" click="switchBeginInput();"/>
 	<mx:RadioButton x="10" y="196" label="Analog input" groupName="inputType" value="analog" click="switchBeginInput();" selected="true"/>
 	<mx:Text x="10" y="222" id="timingText" text="no action"/>
+	<mx:Label x="10" y="243" text="no action" id="onFinishedText"/>
 	
 </mx:Application>

@@ -1,13 +1,17 @@
-import gainer.Gainer;
-import flash.utils.Timer;
 import flash.events.TimerEvent;
+import flash.utils.Timer;
+
+import gainer.Gainer;
 		public var gnr:Gainer;public var inputTimer:Timer;
 public var timingTimer:Timer;
+public var onFinishedTimer:Timer;
 
 //scan input status per delay_msec
 public var delay_msec:Number = 1000;
 //show input timing
 public var timing_delay_msec:Number = 100;
+//show onFinished event timing
+public var message_delay_msec:Number = 500;
 
 
 public function init():void
@@ -72,12 +76,19 @@ public function initBeginInput():void
 {
 	switchBeginInput();
 
+	// for scan timing
 	inputTimer = new Timer(delay_msec, 0);
 	inputTimer.addEventListener(TimerEvent.TIMER, switchInput);
 	inputTimer.start();
 
 	timingTimer = new Timer(timing_delay_msec, 1);
 	timingTimer.addEventListener(TimerEvent.TIMER, hideTiming);
+	
+	// for onFinished event
+	onFinishedTimer = new Timer(message_delay_msec, 1);
+	onFinishedTimer.addEventListener(TimerEvent.TIMER, hideMessageForOnFinished);
+	gnr.onFinished = showMessageForOnFinished;
+
 }
 
 private function switchBeginInput():void
@@ -118,4 +129,17 @@ private function hideTiming(dummy:TimerEvent):void
 	timingTimer.stop();
 	timingTimer.reset();
 	timingText.text = "";
+}
+
+private function showMessageForOnFinished():void
+{
+	onFinishedTimer.start();
+	onFinishedText.text = "Called onFinished event";	
+}
+
+private function hideMessageForOnFinished(dummy:TimerEvent):void
+{
+	onFinishedTimer.stop();
+	onFinishedTimer.reset();
+	onFinishedText.text = "";
 }
