@@ -1,8 +1,8 @@
-;@Id: boot.tpl#103 @
+;@Id: boot.tpl#851 @
 ;=============================================================================
 ;  FILENAME:   boot.asm
-;  VERSION:    4.16
-;  DATE:       6 October 2005
+;  VERSION:    4.18
+;  DATE:       28 June 2007
 ;
 ;  DESCRIPTION:
 ;  M8C Boot Code for CY8C29xxx microcontroller family.
@@ -29,11 +29,14 @@ include "memory.inc"
 ;--------------------------------------
 
 export __Start
+IF	(TOOLCHAIN & HITECH)
+ELSE
 export __bss_start
 export __data_start
 export __idata_start
 export __func_lit_start
 export __text_start
+ENDIF
 export  _bGetPowerSetting
 export   bGetPowerSetting
 
@@ -51,7 +54,13 @@ export   bGetPowerSetting
 ;   Set to 1: Support for C Run-time Environment initialization
 ;   Set to 0: Support for C not included. Faster start up, smaller code space.
 ;
+IF	(TOOLCHAIN & HITECH)
+; The C compiler will customize the startup code - it's not required here
+
+C_LANGUAGE_SUPPORT:              equ 0
+ELSE
 C_LANGUAGE_SUPPORT:              equ 1
+ENDIF
 
 
 ; The following equate is required for proper operation. Reseting its value
@@ -98,65 +107,69 @@ ENABLE_LJMP_TO_MAIN:             equ 0
     AREA TOP (ROM, ABS, CON)
 
     org   0                        ;Reset Interrupt Vector
-    ljmp   __Boot_Start                  ;First instruction executed following a Reset
+IF	(TOOLCHAIN & HITECH)
+;   jmp   __Start                  ;C compiler fills in this vector
+ELSE
+    jmp   __Start                  ;First instruction executed following a Reset
+ENDIF
 
     org   04h                      ;Supply Monitor Interrupt Vector
     halt                           ;Stop execution if power falls too low
 
     org   08h                      ;Analog Column 0 Interrupt Vector
-    ljmp  0x0068
+    `@INTERRUPT_2`
     reti
 
     org   0Ch                      ;Analog Column 1 Interrupt Vector
-    ljmp  0x006C
+    `@INTERRUPT_3`
     reti
 
     org   10h                      ;Analog Column 2 Interrupt Vector
-    ljmp  0x0070
+    `@INTERRUPT_4`
     reti
 
     org   14h                      ;Analog Column 3 Interrupt Vector
-    ljmp  0x0074
+    `@INTERRUPT_5`
     reti
 
     org   18h                      ;VC3 Interrupt Vector
-    ljmp  0x0078
+    `@INTERRUPT_6`
     reti
 
     org   1Ch                      ;GPIO Interrupt Vector
-    ljmp  0x007C
+    `@INTERRUPT_7`
     reti
 
     org   20h                      ;PSoC Block DBB00 Interrupt Vector
-    ljmp  0x0080
+    `@INTERRUPT_8`
     reti
 
     org   24h                      ;PSoC Block DBB01 Interrupt Vector
-    ljmp  0x0084
+    `@INTERRUPT_9`
     reti
 
     org   28h                      ;PSoC Block DCB02 Interrupt Vector
-    ljmp  0x0088
+    `@INTERRUPT_10`
     reti
 
     org   2Ch                      ;PSoC Block DCB03 Interrupt Vector
-    ljmp  0x008C
+    `@INTERRUPT_11`
     reti
 
     org   30h                      ;PSoC Block DBB10 Interrupt Vector
-    ljmp  0x0090
+    `@INTERRUPT_12`
     reti
 
     org   34h                      ;PSoC Block DBB11 Interrupt Vector
-    ljmp  0x0094
+    `@INTERRUPT_13`
     reti
 
     org   38h                      ;PSoC Block DCB12 Interrupt Vector
-    ljmp  0x0098
+    `@INTERRUPT_14`
     reti
 
     org   3Ch                      ;PSoC Block DCB13 Interrupt Vector
-    ljmp  0x009C
+    `@INTERRUPT_15`
     reti
 
     org   40h                      ;PSoC Block DBB20 Interrupt Vector
@@ -199,77 +212,18 @@ ENABLE_LJMP_TO_MAIN:             equ 0
     `@INTERRUPT_25`
     reti
 
-/////////////////////////////////////////////////
-// New Relocatable Vector Table
-/////////////////////////////////////////////////
-
-    org   68h                      ;Analog Column 0 Interrupt Vector
-    `@INTERRUPT_2`
-    reti
-
-    org   6Ch                      ;Analog Column 1 Interrupt Vector
-    `@INTERRUPT_3`
-    reti
-
-    org   70h                      ;Analog Column 2 Interrupt Vector
-    `@INTERRUPT_4`
-    reti
-
-    org   74h                      ;Analog Column 3 Interrupt Vector
-    `@INTERRUPT_5`
-    reti
-
-    org   78h                      ;VC3 Interrupt Vector
-    `@INTERRUPT_6`
-    reti
-
-    org   7Ch                      ;GPIO Interrupt Vector
-    `@INTERRUPT_7`
-    reti
-
-    org   80h                      ;PSoC Block DBB00 Interrupt Vector
-    `@INTERRUPT_8`
-    reti
-
-    org   84h                      ;PSoC Block DBB01 Interrupt Vector
-    `@INTERRUPT_9`
-    reti
-
-    org   88h                      ;PSoC Block DCB02 Interrupt Vector
-    `@INTERRUPT_10`
-    reti
-
-    org   8Ch                      ;PSoC Block DCB03 Interrupt Vector
-    `@INTERRUPT_11`
-    reti
-
-    org   90h                      ;PSoC Block DBB10 Interrupt Vector
-    `@INTERRUPT_12`
-    reti
-
-    org   94h                      ;PSoC Block DBB11 Interrupt Vector
-    `@INTERRUPT_13`
-    reti
-
-    org   98h                      ;PSoC Block DCB12 Interrupt Vector
-    `@INTERRUPT_14`
-    reti
-
-    org   9Ch                      ;PSoC Block DCB13 Interrupt Vector
-    `@INTERRUPT_15`
-    reti
-
 ;-----------------------------------------------------------------------------
 ;  Start of Execution.
 ;-----------------------------------------------------------------------------
 ;  The Supervisory ROM SWBootReset function has already completed the
 ;  calibrate1 process, loading trim values for 5 volt operation.
 ;
-  org A0h
-__Boot_Check_Program:
-    db 2,3,4,5,6,7	// Control bytes sequence for BootLoader based Projects
 
-
+IF	(TOOLCHAIN & HITECH)
+ 	AREA PD_startup(CODE, REL, CON)
+ELSE
+    org 68h
+ENDIF
 __Start:
 
     ; initialize SMP values for voltage stabilization, if required,
@@ -402,8 +356,30 @@ ENDIF ;(PLL_MODE)
     mov   reg[ACB02CR0], 05h
     mov   reg[ACB03CR0], 05h
 
+
+IF	(TOOLCHAIN & HITECH)
     ;---------------------------------------------
-    ; Enter the Large Memory Model, if applicable
+    ; HI-TECH initialization: Enter the Large Memory Model, if applicable
+    ;---------------------------------------------
+	global		__Lstackps
+	mov     a,low __Lstackps
+	swap    a,sp
+
+IF ( SYSTEM_LARGE_MEMORY_MODEL )
+    RAM_SETPAGE_STK SYSTEM_STACK_PAGE      ; relocate stack page ...
+    RAM_SETPAGE_IDX2STK            ; initialize other page pointers
+    RAM_SETPAGE_CUR 0
+    RAM_SETPAGE_MVW 0
+    RAM_SETPAGE_MVR 0
+    IF ( SYSTEM_IDXPG_TRACKS_STK_PP ); Now enable paging:
+    or    F, FLAG_PGMODE_11b       ; LMM w/ IndexPage<==>StackPage
+    ELSE
+    or    F, FLAG_PGMODE_10b       ; LMM w/ independent IndexPage
+    ENDIF ;  SYSTEM_IDXPG_TRACKS_STK_PP
+ENDIF ;  SYSTEM_LARGE_MEMORY_MODEL
+ELSE
+    ;---------------------------------------------
+    ; ImageCraft Enter the Large Memory Model, if applicable
     ;---------------------------------------------
 IF ( SYSTEM_LARGE_MEMORY_MODEL )
     RAM_SETPAGE_STK SYSTEM_STACK_PAGE      ; relocate stack page ...
@@ -423,6 +399,7 @@ ELSE
     mov   A, __ramareas_end        ; Set top of stack to end of used RAM
     swap  SP, A
 ENDIF ;  SYSTEM_LARGE_MEMORY_MODEL
+ENDIF ;	TOOLCHAIN
 
     ;-------------------------
     ; Load Base Configuration
@@ -649,6 +626,9 @@ ENDIF ; 5.0V Operation
     ;
     mov  reg[INT_VC],0             ; Clear any pending interrupts which may
                                    ; have been set during the boot process.
+IF	(TOOLCHAIN & HITECH)
+	ljmp  startup                  ; Jump to C compiler startup code
+ELSE
 IF ENABLE_LJMP_TO_MAIN
     ljmp  _main                    ; goto main (no return)
 ELSE
@@ -656,6 +636,7 @@ ELSE
 .Exit:
     jmp  .Exit                     ; Wait here after return till power-off or reset
 ENDIF
+ENDIF ; TOOLCHAIN
 
     ;---------------------------------
     ; Library Access to Global Parms
@@ -669,6 +650,8 @@ _bGetPowerSetting:
     mov   A, POWER_SETTING
     ret
 
+IF	(TOOLCHAIN & HITECH)
+ELSE
     ;---------------------------------
     ; Order Critical RAM & ROM AREAs
     ;---------------------------------
@@ -710,153 +693,6 @@ __data_start:
     AREA bss               (RAM, REL, CON)   ; general use
 __bss_start:
 
-; end of file boot.asm
-
-
-
-;---------------------------------------------
-;---------------------------------------------
-;---------------------------------------------
-; BootLoader Start procedure
-;---------------------------------------------
-;---------------------------------------------
-;---------------------------------------------
-
-Area BootLoaderArea(ROM,REL)
-
-__Boot_Start:
-    ; initialize SMP values for voltage stabilization, if required,
-    ; leaving power-on reset (POR) level at the default (low) level, at
-    ; least for now. 
-    ;
-    M8C_SetBank1
-    mov   reg[VLT_CR], SWITCH_MODE_PUMP_JUST | LVD_TBEN_JUST | TRIP_VOLTAGE_JUST
-    M8C_SetBank0
-
-    and  reg[CPU_SCR1], ~CPU_SCR1_ECO_ALLOWED  ; Prevent ECO from being enabled
-
-boot_stack_start:          equ 80h
-    mov   A, boot_stack_start          ; Set top of stack to end of used RAM
-    swap  SP, A                        ; This is only temporary if going to LMM
-
-    ;-----------------------------------------------
-    ; Set Power-related Trim & the AGND Bypass bit.
-    ;-----------------------------------------------
-
-IF ( POWER_SETTING & POWER_SET_3V3)            ; *** 3.3 Volt operation   ***
-                                          ; *** 12MHZ Main Oscillator ***
-    M8SSC_SetTableTrims  1, SSCTBL1_TRIM_IMO_3V_24MHZ, SSCTBL1_TRIM_BGR_3V, AGND_BYPASS_JUST
-
-ENDIF ; 3.3 Volt Operation
-
-    mov  [bSSC_KEY1],  0           ; Lock out Flash and Supervisiory operations
-    mov  [bSSC_KEYSP], 0
-
-    ; Either no ECO, or waiting for stable clock is to be done in main
-    M8C_SetBank1
-    mov   reg[OSC_CR0], OSC_CR0_CPU_12MHz
-    M8C_SetBank0
-    M8C_ClearWDTAndSleep           ; Reset the watch dog
-
-    ;------------------------
-    ; Close CT leakage path.
-    ;------------------------
-    mov   reg[ACB00CR0], 05h
-    mov   reg[ACB01CR0], 05h
-    mov   reg[ACB02CR0], 05h
-    mov   reg[ACB03CR0], 05h
-
-    ;---------------------------------------------
-    ; Enter the Large Memory Model, if applicable
-    ;---------------------------------------------
-IF ( SYSTEM_LARGE_MEMORY_MODEL )
-    RAM_SETPAGE_STK SYSTEM_STACK_PAGE      ; relocate stack page ...
-    mov   A, SYSTEM_STACK_BASE_ADDR        ;   and offset, if any
-    swap  A, SP
-    RAM_SETPAGE_IDX2STK            ; initialize other page pointers
-    RAM_SETPAGE_CUR 0
-    RAM_SETPAGE_MVW 0
-    RAM_SETPAGE_MVR 0
-
-  IF ( SYSTEM_IDXPG_TRACKS_STK_PP ); Now enable paging:
-    or    F, FLAG_PGMODE_11b       ; LMM w/ IndexPage<==>StackPage
-  ELSE
-    or    F, FLAG_PGMODE_10b       ; LMM w/ independent IndexPage
-  ENDIF ;  SYSTEM_IDXPG_TRACKS_STK_PP
-ELSE
-    mov   A, __ramareas_end        ; Set top of stack to end of used RAM
-    swap  SP, A
-ENDIF ;  SYSTEM_LARGE_MEMORY_MODEL
-
-    ;-------------------------
-    ; Load Base Configuration
-    ;-------------------------
-    ; Load global parameter settings and load the user modules in the
-    ; base configuration. Exceptions: (1) Leave CPU Speed fast as possible
-    ; to minimize start up time; (2) We may still need to play with the
-    ; Sleep Timer.
-    ;
-    lcall Boot_LoadConfigInit
-
-    ;-------------------------------
-    ; Voltage Stabilization for SMP
-    ;-------------------------------
-
-IF ( POWER_SETTING & POWER_SET_5V0)    ; 5.0V Operation
-IF ( SWITCH_MODE_PUMP ^ 1 )            ; SMP is operational
-    ;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    ; When using the SMP at 5V, we must wait for Vdd to slew from 3.1V to
-    ; 5V before enabling the Precision Power-On Reset (PPOR).
-    ;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    or   reg[INT_MSK0],INT_MSK0_SLEEP
-    M8C_SetBank1
-    and   reg[OSC_CR0], ~OSC_CR0_SLEEP
-    or    reg[OSC_CR0],  OSC_CR0_SLEEP_512Hz
-    M8C_SetBank0
-    M8C_ClearWDTAndSleep                   ; Restart the sleep timer
-    mov   reg[INT_VC], 0                   ; Clear all pending interrupts
-Boot_WaitFor2ms:
-    tst   reg[INT_CLR0], INT_MSK0_SLEEP    ; Test the SleepTimer Interrupt Status
-    jz   Boot_WaitFor2ms                       ; Branch fails when 2 msec has passed
-ENDIF ; SMP is operational
-ENDIF ; 5.0V Operation
-
-    ;-------------------------------
-    ; Set Power-On Reset (POR) Level
-    ;-------------------------------
-    M8C_SetBank1
-
-IF (POWER_SETTING & POWER_SET_5V0)          ; 5.0V Operation?
-     or    reg[VLT_CR],  VLT_CR_POR_HIGH     ;      yes, highest POR trip point required
-ENDIF ; 5.0V Operation
-
-
-    M8C_SetBank0
-
-    ;----------------------------
-    ; Wrap up and invoke "main"
-    ;----------------------------
-
-    ; Disable the Sleep interrupt that was used for timing above.  In fact,
-    ; no interrupts should be enabled now, so may as well clear the register.
-    ;
-    mov  reg[INT_MSK0],0
-
-    ; Everything has started OK. Now select requested CPU & sleep frequency.
-    ;
-    M8C_SetBank1
-//    mov  reg[OSC_CR0],(SELECT_32K_JUST | PLL_MODE_JUST | SLEEP_TIMER_JUST | CPU_CLOCK_JUST)
-    mov  reg[OSC_CR0],2	// set 12MHz CPU Speed
-    M8C_SetBank0
-
-    ; Global Interrupt are NOT enabled, this should be done in main().
-    ; LVD is set but will not occur unless Global Interrupts are enabled.
-    ; Global Interrupts should be enabled as soon as possible in main().
-    ;
-    mov  reg[INT_VC],0             ; Clear any pending interrupts which may
-                                   ; have been set during the boot process.
-    lcall _BootLoader                    ; call main
-Boot_Exit:
-    jmp  Boot_Exit                     ; Wait here after return till power-off or reset
+ENDIF ; TOOLCHAIN
 
 ; end of file boot.asm
