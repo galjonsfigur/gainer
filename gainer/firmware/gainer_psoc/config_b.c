@@ -87,6 +87,7 @@ void Counter8_B_Din_ISR(void);
  */
 typedef struct {
 	BYTE bDinTimerFlags;
+	BYTE bLocalRxBufferIdx;
 } config_b_parameters;
 
 config_b_parameters _b;
@@ -156,6 +157,7 @@ void Enter_Config_B(void)
 	}
 
 	LoadConfig_config_b();
+	_b.bLocalRxBufferIdx = 0
 
 	M8C_EnableGInt;
 
@@ -189,21 +191,15 @@ void Main_Config_B(void)
 
 void config_b_handle_commands(void)
 {
-	char * pCommand;						// Parameter pointer
 	BYTE bNumBytes = 0;
+	BYTE inData = 0;
 
-	// reset Rx buffer if it seems to be broken
-	if (UART_bErrCheck()) {
-		UART_CmdReset();
-		return;
-	}
+	while (uartAvailable()) {
+		inData = uartRead();
+		_gainer.cLocalRxBuffer[_b.bLocalRxBufferIdx] = inData;
 
-	if (UART_bCmdCheck()) {				// Wait for command    
-		if(pCommand = UART_szGetParam()) {
-			// copy the command to the local Rx buffer and reset the command buffer ASAP
-			_gainer.bCommandLength = UART_bCmdLength();
-			memcpy(_gainer.cLocalRxBuffer, pCommand, _gainer.bCommandLength);
-			UART_CmdReset();
+		if (inData == COMMAND_TERMINATOR) {
+			_gainer.bCommandLength = _b.bLocalRxBufferIdx;
 
 			switch (*_gainer.cLocalRxBuffer) {
 				case 'R':	// get all digital inputs (R)
@@ -240,10 +236,13 @@ void config_b_handle_commands(void)
 					bNumBytes = 2;
 					break;
 			}
-		}
 
-		if (bNumBytes > 0) {
-			UART_Write(_gainer.cReplyBuffer, bNumBytes);
+			if (bNumBytes > 0) {
+				UART_Write(_gainer.cReplyBuffer, bNumBytes);
+			}
+			_b.bLocalRxBufferIdx = 0;
+		} else {
+			_b.bLocalRxBufferIdx++;
 		}
 	}
 }

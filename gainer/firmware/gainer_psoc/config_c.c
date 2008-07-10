@@ -40,6 +40,7 @@ typedef struct {
 	BYTE bData[8][8];	// 8 columns (x) by 8 rows (y)
 	BYTE bCurrentScanLine;
 	BYTE bType;
+	BYTE bLocalRxBufferIdx;
 } config_c_parameters;
 
 enum {
@@ -113,6 +114,7 @@ void Enter_Config_C(void)
 	_c.bType = COMMON_K_TYPE;
 
 	LoadConfig_config_c();
+	_c.bLocalRxBufferIdx = 0;
 
 	M8C_EnableGInt;
 
@@ -181,21 +183,15 @@ void Main_Config_C(void)
 
 void config_c_handle_commands(void)
 {
-	char * pCommand;						// Parameter pointer
 	BYTE bNumBytes = 0;
+	BYTE inData = 0;
 
-	// reset Rx buffer if it seems to be broken
-	if (UART_bErrCheck()) {
-		UART_CmdReset();
-		return;
-	}
+	while (uartAvailable()) {
+		inData = uartRead();
+		_gainer.cLocalRxBuffer[_c.bLocalRxBufferIdx] = inData;
 
-	if (UART_bCmdCheck()) {				// Wait for command    
-		if(pCommand = UART_szGetParam()) {
-			// copy the command to the local Rx buffer and reset the command buffer ASAP
-			_gainer.bCommandLength = UART_bCmdLength();
-			memcpy(_gainer.cLocalRxBuffer, pCommand, _gainer.bCommandLength);
-			UART_CmdReset();
+		if (inData == COMMAND_TERMINATOR) {
+			_gainer.bCommandLength = _c.bLocalRxBufferIdx;
 
 			switch (*_gainer.cLocalRxBuffer) {
 				case 'a':	// set the analog output {a}+{n}+{xxxxxxxx}
@@ -216,10 +212,13 @@ void config_c_handle_commands(void)
 					bNumBytes = 2;
 					break;
 			}
-		}
 
-		if (bNumBytes > 0) {
-			UART_Write(_gainer.cReplyBuffer, bNumBytes);
+			if (bNumBytes > 0) {
+				UART_Write(_gainer.cReplyBuffer, bNumBytes);
+			}
+			_c.bLocalRxBufferIdx = 0;
+		} else {
+			_c.bLocalRxBufferIdx++;
 		}
 	}
 }

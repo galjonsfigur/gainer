@@ -14,12 +14,6 @@ const int LastBlock_To_Check = LAST_BLOCK_TO_CHECK;
 
 #pragma text:BootLoaderArea
 
-//uncomment the following line if the button is pull-up
-//#define BUTTON_IS_PULL_UP
-
-#ifdef BUTTON_IS_PULL_UP
-#define SETBUTTON()	PRT1DR|=0x20	// pull up for button on P1[5] pin (was PRT0DR|=0x20)
-#endif
 #define GETBUTTON() (PRT1DR&0x20)		// get value on button pin (P1[5], was PRT0DR&0x20)
 #define BOOTLOADER_MODE_LED_ON() (PRT1DR=(PRT1DR&0xDF)|0x80)	// (P1[7], was PRT1DR|=0x80)
 #define BOOTLOADER_MODE_LED_OFF() (PRT1DR&=0x5F)				// (P1[7], was PRT1DR&=0x7F)
@@ -196,14 +190,13 @@ void BootLoader(){
     }  
 
     // Check button to enter bootloader mode
-#ifdef BUTTON_IS_PULL_UP
-    SETBUTTON();		// pull up for Button
-    if (GETBUTTON()) 
-#else
-    if (!GETBUTTON()) 
-#endif
-      if (!Error) asm("ljmp __Start");	// if button not pressed - Start Firmwire
-			
+	if (!GETBUTTON()) {
+		if (!Error) {
+			// if button not pressed - Start Firmwire
+			asm("ljmp __Start");
+		}
+	}
+
     // Here it communicates with PC and then starts programming
 	BOOTLOADER_MODE_LED_ON();		// light on LED when entered BootLoader Mode
 		

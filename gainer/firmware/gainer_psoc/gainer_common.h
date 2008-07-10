@@ -39,6 +39,15 @@ enum {
 
 
 /**
+ * public definitions and functions for UART
+ * implemented in main.c
+ */
+#define COMMAND_TERMINATOR	42
+
+BYTE uartAvailable(void);
+BYTE uartRead(void);
+
+/**
  * public functions of CONFIG_START
  * implemented in main.c
  */

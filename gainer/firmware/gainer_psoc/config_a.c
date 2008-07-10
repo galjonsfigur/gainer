@@ -114,6 +114,7 @@ typedef struct {
 	BOOL bScanFirstChannelOnly;
 	BYTE bLastDinValues;
 	BOOL bNotifyWhenChanged;
+	BYTE bLocalRxBufferIdx;
 } config_a_parameters;
 
 config_a_parameters _a;
@@ -274,6 +275,7 @@ void Enter_Config_A(void)
 	}
 
 	init_output_ports();
+	_a.bLocalRxBufferIdx = 0;
 
 	M8C_EnableGInt;
 }
@@ -412,26 +414,15 @@ void handle_button_event(void)
 
 void handle_commands_config_a(void)
 {
-	char * pCommand;		// Parameter pointer
 	BYTE bNumBytes = 0;
+	BYTE inData = 0;
 
-	// reset Rx buffer if it seems to be broken
-	if (UART_bErrCheck()) {
-		UART_CmdReset();
-		return;
-	}
+	while (uartAvailable()) {
+		inData = uartRead();
+		_gainer.cLocalRxBuffer[_a.bLocalRxBufferIdx] = inData;
 
-	if (UART_bCmdCheck()) {				// Wait for command    
-		if (pCommand = UART_szGetParam()) {
-			// copy the command to the local Rx buffer and reset the command buffer ASAP
-			_gainer.bCommandLength = UART_bCmdLength();
-			memcpy(_gainer.cLocalRxBuffer, pCommand, _gainer.bCommandLength);
-			UART_CmdReset();
-
-			// ignore a command if specified command length is zero
-			if (0 == _gainer.bCommandLength) {
-				return;			
-			}
+		if (inData == COMMAND_TERMINATOR) {
+			_gainer.bCommandLength = _a.bLocalRxBufferIdx;
 
 			switch (*_gainer.cLocalRxBuffer) {
 				case 'D':	// set all digital outputs (Dxx)
@@ -516,6 +507,9 @@ void handle_commands_config_a(void)
 					bNumBytes = 2;
 					break;
 			}
+			_a.bLocalRxBufferIdx = 0;
+		} else {
+			_a.bLocalRxBufferIdx++;
 		}
 
 		if (bNumBytes > 0) {

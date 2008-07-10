@@ -8,13 +8,19 @@
 #include "PSoCAPI.h"    // PSoC API definitions for all User Modules
 #include "gainer_common.h"
 
+/**
+ * interrupt handler
+ */
+#pragma interrupt_handler MY_UART_RX_ISR;
+void MY_UART_RX_ISR(void);
+
 global_parameters _gainer;
 
 /**
  * private functions of CONFIG_START
  */
 const char cConfigCommandPrefix[] = {'K','O','N','F','I','G','U','R','A','T','I','O','N','_'};
-const char cVersionString[] = {'1','.','1','.','0','b','0','0'};
+const char cVersionString[] = {'1','.','1','.','0','b','0','1'};
 
 void handle_commands_config_start(void);
 BYTE handle_config_command(char *pCommand);
@@ -23,6 +29,48 @@ BYTE command_verbose(char *pCommand);
 BYTE command_version(char *pCommand);
 void init_global_parameters(void);
 void change_configuration(BYTE from, BYTE to);
+
+#define UART_RX_BUF_SIZE	128
+
+BYTE rxBuffer[UART_RX_BUF_SIZE];
+BYTE rxBufferHead = 0;
+BYTE rxBufferTail = 0;
+
+BYTE bLocalRxBufferIdx = 0;
+
+void MY_UART_RX_ISR(void)
+{
+	BYTE inData = UART_bReadRxData();
+	BYTE idx = (rxBufferHead + 1) % UART_RX_BUF_SIZE;
+
+	// just ignore if the buffer is full
+	if (idx != rxBufferTail) {
+		rxBuffer[rxBufferHead] = inData;
+		rxBufferHead = idx;
+	}	
+}
+
+BYTE uartAvailable(void)
+{
+	return (UART_RX_BUF_SIZE + rxBufferHead - rxBufferTail) % UART_RX_BUF_SIZE;
+}
+
+BYTE uartRead(void)
+{
+	BYTE outData = 0;
+
+	if (rxBufferHead == rxBufferTail) {
+		// there is no byte to read
+		return 0;
+	}
+
+	UART_IntCntl(UART_DISABLE_RX_INT);
+	outData = rxBuffer[rxBufferTail];
+	rxBufferTail = (rxBufferTail + 1) % UART_RX_BUF_SIZE;
+	UART_IntCntl(UART_ENABLE_RX_INT);
+
+	return outData;
+}
 
 void main()
 {
@@ -94,19 +142,18 @@ void Main_Config_Start()
 
 void handle_commands_config_start()
 {
-	char * pCommand;						// Parameter pointer
+	BYTE inData = 0;
 
-	// reset Rx buffer if it seems to be broken
-	if (UART_bErrCheck()) {
-		UART_CmdReset();
-		return;
-	}
+	while (uartAvailable()) {
+		inData = uartRead();
+		_gainer.cLocalRxBuffer[bLocalRxBufferIdx] = inData;
 
-	if (UART_bCmdCheck()) {					// Wait for command    
-		if(pCommand = UART_szGetParam()) {
-			switch (*pCommand) {
+		if (inData == COMMAND_TERMINATOR) {
+			_gainer.bCommandLength = bLocalRxBufferIdx;
+
+			switch (*_gainer.cLocalRxBuffer) {
 				case 'K':	// configuration (KONFIGURATION_n)
-					UART_Write(_gainer.cReplyBuffer, handle_config_command(pCommand));
+					UART_Write(_gainer.cReplyBuffer, handle_config_command(_gainer.cLocalRxBuffer));
 					WaitForBriefSpells();
 					break;
 				
@@ -116,21 +163,26 @@ void handle_commands_config_start()
 					break;
 				
 				case 'V':	// verbose (V)
-					UART_Write(_gainer.cReplyBuffer, command_verbose(pCommand));
+					UART_Write(_gainer.cReplyBuffer, command_verbose(_gainer.cLocalRxBuffer));
 					break;
 				
 				case '?':	// version (?)
-					UART_Write(_gainer.cReplyBuffer, command_version(pCommand));
+					UART_Write(_gainer.cReplyBuffer, command_version(_gainer.cLocalRxBuffer));
 					break;
 				
 				default:
 					// seems to be an invalid command
 					PutErrorStringToReplyBuffer();
+					UART_CPutString("[");
+					UART_Write(_gainer.cLocalRxBuffer, _gainer.bCommandLength);
+					UART_CPutString("]");
 					UART_Write(_gainer.cReplyBuffer, 2);
 					break;
 			}
+			bLocalRxBufferIdx = 0;
+		} else {
+			bLocalRxBufferIdx++;
 		}
-		UART_CmdReset();					// Reset command buffer
 	}
 }
 
@@ -141,7 +193,7 @@ BYTE handle_config_command(char *pCommand)
 	BYTE i = 0;
 
 	// check command length
-	if ((sizeof(cConfigCommandPrefix) + 1) != UART_bCmdLength()) {
+	if ((sizeof(cConfigCommandPrefix) + 1) != _gainer.bCommandLength) {
 		// seems to be an invalid command
 		PutErrorStringToReplyBuffer();
 		bNumBytes = 2;
@@ -217,9 +269,9 @@ BYTE handle_config_command(char *pCommand)
 	return bNumBytes;
 }
 
-BYTE command_reboot(void)
+BYTE command_reboot()
 {
-	if (1 != UART_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -236,7 +288,7 @@ BYTE command_verbose(char *pCommand)
 {
 	char * p = pCommand;
 
-	if (2 != UART_bCmdLength()) {
+	if (2 != _gainer.bCommandLength) {
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
@@ -264,7 +316,8 @@ BYTE command_version(char *pCommand)
 	char * p = pCommand;
 	BYTE i = 0;
 
-	if (1 != UART_bCmdLength()) {
+	if (1 != _gainer.bCommandLength) {
+		UART_CPutString("<");
 		PutErrorStringToReplyBuffer();
 		return 2;
 	}
