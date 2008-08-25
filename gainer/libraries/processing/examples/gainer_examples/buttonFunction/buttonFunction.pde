@@ -16,7 +16,7 @@ void draw(){
 }
 
 //if you want get buttonEvent on handler
-void gainerButtonUpdated(boolean bt){
+void gainerButtonEvent(boolean bt){
   if(bt){
     fill(255,0,0);
   }else{

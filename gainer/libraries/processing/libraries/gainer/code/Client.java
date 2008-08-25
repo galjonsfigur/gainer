@@ -49,7 +49,7 @@ public class Client{
 	}
 	
 	//受信バッファを読む
-	public String readGainer(long timeout) throws TimeoutException{
+	public synchronized String readGainer(long timeout) throws TimeoutException{
 		try{
 			InputStream input = port.getInputStream();
 			long start = System.currentTimeMillis();
@@ -90,6 +90,7 @@ public class Client{
 	public boolean openGainer(String pname){
 		if(openSerialPort(pname)){
 
+			System.out.println("open serial port");
 			String returnCode="";
 			while(!returnCode.equals("Q*")){
 				try{
@@ -137,7 +138,8 @@ public class Client{
 						if(version.startsWith(Gainer.libraryVersion, 1) ){
 							return true;
 						}
-						//sendGainer("Q*",true);
+
+						//見つけられなかった…
 						cleanSerialPort();
 						
 						

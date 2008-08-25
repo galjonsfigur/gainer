@@ -2,6 +2,9 @@
  * GAINER control libray
  * @author PDP Project
  * @version 1.0.1
+ *
+ * 2008.04.04 - modified my masato at bird.dip.jp
+ * scanLine, scanMatrix for MODE7
  */
 
 package processing.gainer;
@@ -58,15 +61,14 @@ public final class Gainer {
 		
 		client = new Client();
 		if(client.findGainer()){
-			System.out.println("ok.. found Gainer ");
 			
 			initialize(mode,verb);
-			serialtokenizer = new SerialTokenizer(this,client.port);
-			serialtokenizer.printDebugString = DEBUG;
 
 		}else{
 			errorMessage("Gainer not found !!");
 		}
+		
+		parent.registerDispose(this);
 	}
 	
 	public Gainer(PApplet parent, boolean verb){
@@ -86,10 +88,7 @@ public final class Gainer {
 		
 		client = new Client();
 		if(client.openGainer(pname)){
-			
 			initialize(mode,verb);
-			serialtokenizer = new SerialTokenizer(this,client.port);
-			serialtokenizer.printDebugString = DEBUG;
 			
 		}else{
 			errorMessage("Gainer not found !!");
@@ -111,9 +110,7 @@ public final class Gainer {
 	}
 	
 	public void dispose(){
-		System.out.println("clean");
-		serialtokenizer.clean();
-		reboot();
+		//reboot();
 		client.cleanSerialPort();
 	}
 	
@@ -193,7 +190,7 @@ public final class Gainer {
 				 System.out.println("exec Code " + code);
 			 }
 		}catch(TimeoutException e){
-			System.out.println("exec Code  " + code + "  TIMEOUT!");
+			System.out.println("exec Code " + code + " TIMEOUT!");
 		}catch(IOException e){
 			errorMessage("I/O error!!");
 		}
@@ -203,7 +200,7 @@ public final class Gainer {
 	
 	private boolean initialize(int mode, boolean verb){
 
-		parent.registerDispose(this);
+
 		try {
 			gainerButtonEventMethod = 
 				parent.getClass().getMethod("gainerButtonEvent",new Class[] { Boolean.TYPE });
@@ -225,31 +222,27 @@ public final class Gainer {
 
 		}	
 		
-		
-		
-		
-		try{
-			Thread.sleep(100);
-		}catch(InterruptedException e){}
-		
-		//reboot();
+		reboot();
 		
 		if(getDeviceVersion().startsWith(libraryVersion,1)){
 			System.out.println("version check. OK");
-			
 			setVerbose(verb);
 			if(!configuration(mode)){
 				errorMessage("configuration error!!");
 			}
-			
 			try{
 				Thread.sleep(100);
 			}catch(InterruptedException e){}
 			
 			System.out.println("get ready!");
 			///³‚µ‚­ŠJ‚¢‚½
-
+			
+			serialtokenizer = new SerialTokenizer(this,client.port);
+			serialtokenizer.printDebugString = DEBUG;
+			
 			return true;
+		}else{
+			errorMessage("not match device and library");
 		}
 		
 
@@ -262,22 +255,22 @@ public final class Gainer {
 	
 	private void reboot(){
 		try{
-			Thread.sleep(100);
+			Thread.sleep(1000);
 		}catch(InterruptedException e){}
 		
-//		long t;
-//		t = System.currentTimeMillis();
-//		System.out.println("method reboot BEGIN " + t);
+		//long t;
+		//t = System.currentTimeMillis();
+		//System.out.println("method reboot BEGIN " + t);
 		
 
-		execCode("Q*",false);
+		execCode("Q*",true);
 
 		
-//		t = System.currentTimeMillis();
-//		System.out.println("method reboot END " + t);
+		//t = System.currentTimeMillis();
+		//System.out.println("method reboot END " + t);
 		
 		try{
-			Thread.sleep(100);
+			Thread.sleep(1000);
 		}catch(InterruptedException e){}
 	}
 	
@@ -292,9 +285,6 @@ public final class Gainer {
 			System.out.println("silent mode");
 		}
 		execCode(code,true);
-		try{
-			Thread.sleep(100);
-		}catch(InterruptedException e){}
 	}
 	
 	private boolean configuration(int mode){
@@ -383,9 +373,9 @@ public final class Gainer {
 			return false;
 		case MODE7:
 			analogInput = new int[0];
-			digitalInput = new boolean[8];
+			digitalInput = new boolean[0];
 			
-			analogOutput = new int[0];
+			analogOutput = new int[8];
 			digitalOutput = new boolean[8];
 			
 			if(execCode("KONFIGURATION_7*",true).startsWith("KONFIGURATION_7")){
@@ -399,7 +389,7 @@ public final class Gainer {
 			digitalInput = new boolean[0];
 			
 			analogOutput = new int[8];
-			digitalOutput = new boolean[8];
+			digitalOutput = new boolean[0];
 			
 			if(execCode("KONFIGURATION_8*",true).startsWith("KONFIGURATION_8")){
 				break;
@@ -638,7 +628,7 @@ public final class Gainer {
 		
 		return true;
 	}
-	
+
 	public void analogSamplingAllChannels(){
 		execCode("M0*",true);
 	}
@@ -697,7 +687,7 @@ public final class Gainer {
 			this.port = port;
 			
 			this.gainer = gainer;
-
+			
 			try{
 				input = this.port.getInputStream();
 		
@@ -731,11 +721,11 @@ public final class Gainer {
 		
 		public synchronized void clean(){
 			port.removeEventListener();
-//			try{
-//				input.close();
-//			}catch(IOException e){}
-//			
-//			input = null;
+			try{
+				input.close();
+			}catch(IOException e){}
+			
+			input = null;
 		}
 		
 
@@ -812,6 +802,50 @@ public final class Gainer {
 		
 	}
 
+
+	// for MODE7	
+	public boolean scanLine(int ch, int[] values){
+		if ((analogOutput.length != 8) || (digitalOutput.length != 8)){
+			return false;
+		}
+		if (ch >= 8){
+			return false;
+		}
+		String code = "a" + Integer.toString(ch);
+		for (int i = 0; i < 8; i++){
+			int value = values[i];
+			value = value <    0?    0: value;
+			value = value > 0x0f? 0x0f: value;
+			code += Integer.toHexString(value).toUpperCase();
+		}
+		code += "*";
+		execCode(code, false);
+
+		return true;
+	}
+
+	public boolean scanMatrix(int[] values){
+		if (currentVerbose)
+			System.out.println("scanMatrix");
+
+		if (values.length != 64) {
+			// System.out.println("scanMatrix != 64");
+			return false;
+		}
+		if ((analogOutput.length != 8) || (digitalOutput.length != 8)) {
+			// System.out.println("scanMatrix != 8");
+			return false;
+		}
+		int[] v = new int[8];
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				v[j] = values[i * 8 + j];
+			}
+			scanLine(i, v);
+		}
+
+		return true;
+	}
 
 	
 	
