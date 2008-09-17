@@ -434,14 +434,12 @@ public final class Gainer {
 	}
 	
 	public void endDigitalInput(){
-		execCode("E*",true);
+		execCode("E*",false);
 	}
 	
 	//全チャンネルに一度に送信
-	//0x0000 - 0xFFFF
 	public boolean digitalOutput(int channels){
-		if(channels <=0xFFFF && channels >=0){
-			String val = Integer.toHexString(channels).toUpperCase();
+			String val = Integer.toHexString(channels&0xFFFF).toUpperCase();
 			String sv="";
 			//必ず4桁
 			for(int i=0;i<4-val.length();i++){
@@ -459,8 +457,6 @@ public final class Gainer {
 			}
 			
 			return true;
-		}
-		return false;
 	}
 	
 	public boolean digitalOutput(boolean[] values){
@@ -504,7 +500,7 @@ public final class Gainer {
 	
 	//配列のチャンネルをHigh それ以外はLow
 	public boolean setHigh(int[] channels){
-  	byte vch = 0;
+  	int vch = 0;
   	for(int i=0;i<channels.length;i++){
   		if(digitalOutput.length>channels[i]){
   		  vch |= (1<<channels[i]);
@@ -515,16 +511,8 @@ public final class Gainer {
   		digitalOutput[channels[i]] = true;
   	}
   	
- 		String val = Integer.toHexString(vch).toUpperCase();
-		String sv="";
-		for(int i=0;i<digitalOutput.length-val.length();i++){
-			sv += "0";
-		}
-		sv += val;
-		 	
-		//String sv = val<16 ? "0": "";
-		//sv+= Integer.toHexString(val).toUpperCase();
-		String code = "D"+ sv +"*";
+  	String val = PApplet.hex(vch, 4);
+		String code = "D"+ val.toUpperCase() +"*";
 		execCode(code,currentVerbose);
 		return true;
 	}
@@ -544,7 +532,7 @@ public final class Gainer {
 	
 	//配列のチャンネルをlow それ以外はHigh
 	public boolean setLow(int[] channels){
-  	byte vch = 0;
+  	int vch = 0;
   	for(int i=0;i<channels.length;i++){
   		if(digitalOutput.length>channels[i]){
   		  vch |= (1<<channels[i]);
@@ -552,19 +540,11 @@ public final class Gainer {
 	  		return false;
   		}
 //  	冗長かな？
-  		digitalOutput[channels[i]] = false; 		
+  		digitalOutput[channels[i]] = true;
   	}
   	
- 		String val = Integer.toHexString(vch).toUpperCase();
-		String sv="";
-		for(int i=0;i<digitalOutput.length-val.length();i++){
-			sv += "0";
-		}
-		sv += val;
-		 	
-		//String sv = val<16 ? "0": "";
-		//sv+= Integer.toHexString(val).toUpperCase();
-		String code = "D"+ sv +"*";
+  	String val = PApplet.hex(~vch, 4);
+		String code = "D"+ val.toUpperCase() +"*";
 		execCode(code,currentVerbose);
 		return true;
 	}
@@ -574,7 +554,7 @@ public final class Gainer {
 	}
 	
 	public void endAnalogInput(){
-		execCode("E*",true);
+		execCode("E*",false);
 	}
 	
 	public void peekAnalogInput(){
