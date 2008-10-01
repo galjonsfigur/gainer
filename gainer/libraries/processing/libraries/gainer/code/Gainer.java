@@ -399,6 +399,10 @@ public final class Gainer {
 			return false;
 		}
 		
+		for(int i=0;i<analogInput.length;i++){
+			analogInput[i] = 128;
+		}
+		
 		return true;
 	}
 	
@@ -494,7 +498,9 @@ public final class Gainer {
   		digitalOutput[channel] = true;
   		
 			return true;
-		}		
+		}
+		
+		//throw new IndexOutOfBoundsException("Index out of digitalOutput[]/無いはずのdigitalOutput[]に出力しようとしています");
 		return false;
 	}
 	
@@ -564,7 +570,8 @@ public final class Gainer {
 	//指定チャンネルに値を出力
 	//値は0-255に丸める
 	public boolean analogOutput(int ch,int value){
-		if(ch>=analogInput.length ){
+		if(ch>=analogOutput.length ){
+			//throw new IndexOutOfBoundsException("Index out of analogOutput[]/無いはずのanalogOutput[]に出力しようとしています");		
 			return false;
 		}
 		String code = "a" + Integer.toHexString(ch).toUpperCase();
@@ -582,7 +589,6 @@ public final class Gainer {
 		execCode(code,currentVerbose);
 
 		return true;
-
 	}
 	
 	//配列を対応するチャンネルにそれぞれ出力
