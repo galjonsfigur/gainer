@@ -72,7 +72,6 @@ class gainer.Digital {
 		if(typeof(ch) == "number") {
 			if (numOutCh>ch) {
 				var s:String = "H"+ch.toString(16).toUpperCase()+"*";
-				trace(s);
 				_gainer.enqueue(new SynchronizedGC(_gainer, s, "H"));
 			} else {
 				trace("Gainer error!! out of bounds digital out");
