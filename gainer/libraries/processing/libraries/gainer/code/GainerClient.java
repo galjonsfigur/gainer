@@ -7,7 +7,7 @@ import java.util.*;
 import gnu.io.*;
 
 //シリアル通信をカプセル
-public class Client{
+public class GainerClient{
 	
   private final int rate=38400;
   private final int parity=SerialPort.PARITY_NONE;
@@ -17,7 +17,7 @@ public class Client{
 	public SerialPort port;
 	private OutputStream output;
 
-	public Client(){
+	public GainerClient(){
 	}
 	
 	
@@ -110,13 +110,13 @@ public class Client{
 	public boolean findGainer(){
 		//Properties prop = System.getProperties();
 		//String os = prop.getProperty("os.name");
-		Enumeration portList = CommPortIdentifier.getPortIdentifiers();
+		Enumeration<?> portList = CommPortIdentifier.getPortIdentifiers();
 		if(!portList.hasMoreElements()){
 			System.out.println("no elements :there is no com port");
 		}
 		System.out.println("finding Gainer...");
 		while(portList.hasMoreElements()){
-			CommPortIdentifier portId = (CommPortIdentifier) portList.nextElement();
+			CommPortIdentifier portId = (CommPortIdentifier)portList.nextElement();
 			String pname = portId.getName();
 			if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
 				if(pname.startsWith("/dev/cu")){

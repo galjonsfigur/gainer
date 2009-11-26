@@ -1,9 +1,11 @@
 /**
- * GAINER control libray
+ * GAINER control library
  * @author PDP Project
- * @version 1.0.1
+ * @version 1.1.0
  *
- * 2008.04.04 - modified my masato at bird.dip.jp
+ * 2008.10.23 - modified by morecat
+ * continuousMode, for Pepper
+ * 2008.04.04 - modified by masato at bird.dip.jp
  * scanLine, scanMatrix for MODE7
  */
 
@@ -34,32 +36,34 @@ public final class Gainer {
 	public boolean buttonPressed = false;
 	public int[] analogInput;
 	public boolean[] digitalInput;
-  public int[] analogOutput;
-  public boolean[] digitalOutput;
-  
-  public static final int MODE1 = 1;
-  public static final int MODE2 = 2;
-  public static final int MODE3 = 3;
-  public static final int MODE4 = 4;
-  public static final int MODE5 = 5;
-  public static final int MODE6 = 6;
-  public static final int MODE7 = 7;
-  public static final int MODE8 = 8;
-  
-  
+	
+	public int[] analogOutput;
+	public boolean[] digitalOutput;
+	  
+	public static final int MODE1 = 1;
+	public static final int MODE2 = 2;
+	public static final int MODE3 = 3;
+	public static final int MODE4 = 4;
+	public static final int MODE5 = 5;
+	public static final int MODE6 = 6;
+	public static final int MODE7 = 7;
+	public static final int MODE8 = 8;
+	  
+	  
 	private boolean currentVerbose;
 	
   
-	private final Client client;
+	private final GainerClient client;
 	private SerialTokenizer serialtokenizer=null;
 	
 
 	public static boolean DEBUG = false;
-
+	public static boolean continuousMode = false; // added by morecat
+	
 	public Gainer(PApplet parent, int mode, boolean verb){
 		this.parent = parent;
 		
-		client = new Client();
+		client = new GainerClient();
 		if(client.findGainer()){
 			
 			initialize(mode,verb);
@@ -86,7 +90,7 @@ public final class Gainer {
 	public Gainer(PApplet parent, String pname,int mode,boolean verb){
 		this.parent = parent;
 		
-		client = new Client();
+		client = new GainerClient();
 		if(client.openGainer(pname)){
 			initialize(mode,verb);
 			
@@ -174,9 +178,12 @@ public final class Gainer {
 			}else if(iCode.startsWith("F")){
 				buttonPressed = false;
 				createButtonEvent();
+				
+			// added by morecat
+			}else if(iCode.startsWith("E")){ // E* ... polling done
+			// System.out.println("E* command is detected");
+				continuousMode = false;	
 			}
-		
-		
 		}
 
 	}
@@ -434,6 +441,7 @@ public final class Gainer {
 	}
 	
 	public void beginDigitalInput(){
+		continuousMode = true; // morecat
 		execCode("r*",false);
 	}
 	
@@ -556,6 +564,7 @@ public final class Gainer {
 	}
 	
 	public void beginAnalogInput(){
+		continuousMode = true;
 		execCode("i*",false);
 	}
 	
@@ -706,12 +715,26 @@ public final class Gainer {
 		}
 		
 		public synchronized void clean(){
+			// morecat
+			String s;
+			if (continuousMode == true) {
+				execCode("E*",false);
+				try{
+					while((s = client.readGainer(500)).indexOf("E*") == -1){
+						System.err.println("read " + s);
+					}
+				  
+				}catch(TimeoutException e){
+					System.out.println("Clean Timeout error ");
+				}
+			}
+		
 			port.removeEventListener();
-			try{
-				input.close();
-			}catch(IOException e){}
 			
-			input = null;
+//			try{
+//				input.close();
+//			}catch(IOException e){}
+//			input = null;
 		}
 		
 

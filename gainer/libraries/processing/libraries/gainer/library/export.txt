@@ -1,0 +1,3 @@
+application.macosx  =  gainer.jar, RXTXcomm.jar, librxtxSerial.jnilib
+application.windows =  gainer.jar, RXTXcomm.jar, rxtxSerial.dll
+application.linux   =  gainer.jar, RXTXcomm.jar, librxtxSerial.so
